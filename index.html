@@ -256,9 +256,14 @@ let selectedCorps = [];
 let currentTab = 'both';
 let chartInst = null;
 
-const VALID_CORPS = ['5minlab','Dreamotion','Flyway Games','KRAFTON HQ','Loonshot Games',
+const VALID_CORPS = ['5minlab','Dreamotion','Flyway Games','JOFSOFT','KRAFTON HQ','Loonshot Games',
   'OVERDARE','Olivetree Games','Omni Craftlabs','PUBG STUDIOS','ReLU Games',
   'Rising Wings','bluehole studio','inZOI studio','기타(해외파견)'];
+function normalizeId(email) {
+  if (!email) return null;
+  return String(email).split('@')[0].toLowerCase().trim();
+}
+
 const DOW_ORDER = ['월','화','수','목','금','토','일'];
 
 // ══════════════════════════════════════════
@@ -351,6 +356,16 @@ function buildData(fast, inf, hr) {
     }
   });
 
+  // 기타(해외파견): 인사정보에 없으므로 패스트캠퍼스 등록 인원 수로 총원 보정
+  if (!corpTotalMap['기타(해외파견)']) {
+    const etcSet = new Set();
+    fast.filter(r => r['법인구분'] === '기타(해외파견)').forEach(r => {
+      const u = normalizeId(r['메일주소']) || r['사번'];
+      if (u) etcSet.add(u);
+    });
+    if (etcSet.size > 0) corpTotalMap['기타(해외파견)'] = etcSet.size;
+  }
+
   // 유효 법인 목록
   const corps = VALID_CORPS.filter(c =>
     fast.some(r => r['법인구분'] === c) || inf.some(r => r['법인구분'] === c)
@@ -421,7 +436,7 @@ function sumHours(arr) {
 function enrolledSet(arr) {
   const s = new Set();
   arr.filter(r => r['활성여부(최초1회)'] == 1 || r['활성여부(최초1회)'] === 'TRUE').forEach(r => {
-    const u = r['메일주소'] || r['사번'];
+    const u = normalizeId(r['메일주소']) || r['사번'];
     if (u) s.add(u);
   });
   return s;
@@ -522,7 +537,7 @@ function renderCorpTable() {
   function corpEnrolled(arr) {
     const m = {};
     arr.filter(r => r['활성여부(최초1회)'] == 1 || r['활성여부(최초1회)'] === 'TRUE').forEach(r => {
-      const c = r['법인구분'], u = r['메일주소'] || r['사번'];
+      const c = r['법인구분'], u = normalizeId(r['메일주소']) || r['사번'];
       if (c && u) { if (!m[c]) m[c] = new Set(); m[c].add(u); }
     });
     return m;
@@ -541,11 +556,12 @@ function renderCorpTable() {
     sumT += tot; sumE += enr;
     const rate = tot > 0 ? enr / tot : 0;
     const rc = rate >= .4 ? 'r-high' : rate >= .25 ? 'r-mid' : 'r-low';
+    const rateStr = (rate * 100).toFixed(1) + '%';
     const tr = document.createElement('tr');
     tr.innerHTML = `<td style="font-weight:600">${corp}</td>
       <td style="text-align:right" class="num">${tot.toLocaleString()}</td>
       <td style="text-align:right" class="num">${enr.toLocaleString()}</td>
-      <td style="text-align:right" class="num ${rc}">${(rate * 100).toFixed(1)}%</td>`;
+      <td style="text-align:right" class="num ${rc}">${rateStr}</td>`;
     tbody.appendChild(tr);
   });
 
@@ -602,7 +618,7 @@ function renderDept() {
       if (!m[d]) m[d] = { hours: 0, users: new Set() };
       m[d].hours += parseFloat(r['학습시간(H)']) || 0;
       if (r['활성여부(최초1회)'] == 1 || r['활성여부(최초1회)'] === 'TRUE') {
-        const u = r['메일주소'] || r['사번']; if (u) m[d].users.add(u);
+        const u = normalizeId(r['메일주소']) || r['사번']; if (u) m[d].users.add(u);
       }
     });
     return Object.entries(m).map(([n, v]) => ({ name: n, hours: v.hours, users: v.users.size }))
@@ -643,7 +659,7 @@ function renderCourses() {
       if (!m[n]) m[n] = { users: new Set(), hours: 0 };
       m[n].hours += parseFloat(r['학습시간(H)']) || 0;
       if (r['활성여부(최초1회)'] == 1 || r['활성여부(최초1회)'] === 'TRUE') {
-        const u = r['메일주소'] || r['사번']; if (u) m[n].users.add(u);
+        const u = normalizeId(r['메일주소']) || r['사번']; if (u) m[n].users.add(u);
       }
     });
     return Object.entries(m).map(([n, v]) => ({ name: n, users: v.users.size, hours: v.hours }))
