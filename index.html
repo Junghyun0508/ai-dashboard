@@ -9,15 +9,16 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Space+Mono:wght@400;700&display=swap');
 :root {
-  --bg:#0d0f14;--surface:#161921;--surface2:#1e2230;--border:#2a2f3d;
-  --accent:#4f8ef7;--accent2:#f7794f;--accent3:#4ff7b8;--purple:#b47ff7;
-  --text:#e8ecf4;--muted:#7a8299;--fast:#4f8ef7;--inf:#4ff7b8;
+  --bg:#f5f6fa;--surface:#ffffff;--surface2:#f0f1f5;--border:#e0e2ea;
+  --accent:#2563eb;--accent2:#ea5b2f;--accent3:#0d9e6e;--purple:#7c3aed;
+  --text:#1a1d2e;--muted:#6b7280;--fast:#2563eb;--inf:#0d9e6e;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);padding:24px 28px;min-width:1100px;}
 
 /* ── LOADING ── */
 #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .5s;}
+.spinner{border-top-color:var(--accent) !important;}
 #loadingScreen.hidden{opacity:0;pointer-events:none;}
 .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -63,7 +64,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .corp-chips{display:flex;flex-wrap:wrap;gap:6px;}
 .chip{padding:4px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;}
 .chip:hover{border-color:var(--accent);color:var(--accent);}
-.chip.active{background:rgba(79,142,247,.15);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.chip.active{background:rgba(37,99,235,.1);border-color:var(--accent);color:var(--accent);font-weight:700;}
 
 /* ── TABS ── */
 .tab-row{display:flex;margin-bottom:14px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:3px;width:fit-content;}
@@ -80,7 +81,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .panel-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .dot.b{background:var(--accent);}.dot.g{background:var(--accent3);}.dot.p{background:var(--purple);}
-.period-badge{display:inline-block;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--accent);font-size:10px;font-family:'Space Mono',monospace;padding:2px 8px;border-radius:99px;}
+.period-badge{display:inline-block;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.25);color:var(--accent);font-size:10px;font-family:'Space Mono',monospace;padding:2px 8px;border-radius:99px;}
 .chart-legend{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;}
 .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
 .leg-item span{width:12px;height:3px;border-radius:2px;display:inline-block;}
@@ -90,15 +91,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .tbl-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
 thead th{padding:7px 9px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border);text-transform:uppercase;white-space:nowrap;}
-tbody td{padding:8px 9px;border-bottom:1px solid rgba(42,47,61,.5);}
+tbody td{padding:8px 9px;border-bottom:1px solid var(--border);}
 tbody tr:hover td{background:var(--surface2);}
 tbody tr:last-child td{border-bottom:none;}
-.total-row td{color:var(--accent);font-weight:700;background:rgba(79,142,247,.05)!important;}
+.total-row td{color:var(--accent);font-weight:700;background:rgba(37,99,235,.04)!important;}
 .num{font-family:'Space Mono',monospace;}
 .r-high{color:var(--accent3);}.r-mid{color:var(--accent);}.r-low{color:var(--muted);}
 .rank-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;}
-.rk1{background:rgba(247,185,79,.2);color:#f7b94f;}.rk2{background:rgba(180,180,180,.15);color:#b0b0b0;}
-.rk3{background:rgba(205,127,50,.15);color:#cd7f32;}.rkn{background:var(--surface2);color:var(--muted);}
+.rk1{background:rgba(234,179,8,.15);color:#a16207;}.rk2{background:rgba(100,116,139,.12);color:#475569;}
+.rk3{background:rgba(180,83,9,.12);color:#92400e;}.rkn{background:var(--surface2);color:var(--muted);}
 
 /* ── PROGRESS ── */
 .prog-row{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
@@ -342,7 +343,9 @@ function buildData(fast, inf, hr) {
   const corpTotalMap = {};
   hr.forEach(r => {
     const flag = r['대상여부'];
-    if (flag == 1 || flag === 'TRUE' || flag === true) {
+    // 구글 시트 CSV에서 TRUE/FALSE 문자열로 내려옴
+    const isTarget = flag === true || flag === 'TRUE' || flag === 'True' || flag == 1 || flag === '1';
+    if (isTarget) {
       const c = r['법인구분'];
       if (c && VALID_CORPS.includes(c)) corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
     }
@@ -489,12 +492,12 @@ function renderMonthly() {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { backgroundColor:'#1e2230', borderColor:'#2a2f3d', borderWidth:1, titleColor:'#7a8299', bodyColor:'#e8ecf4',
+        tooltip: { backgroundColor:'#ffffff', borderColor:'#e0e2ea', borderWidth:1, titleColor:'#6b7280', bodyColor:'#1a1d2e',
           callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}H` } }
       },
       scales: {
-        x: { grid:{ color:'rgba(42,47,61,.5)' }, ticks:{ color:'#7a8299', font:{ size:10, family:"'Space Mono'" } } },
-        y: { grid:{ color:'rgba(42,47,61,.5)' }, ticks:{ color:'#7a8299', font:{ size:10, family:"'Space Mono'" }, callback: v => Math.round(v) + 'H' } }
+        x: { grid:{ color:'rgba(0,0,0,.08)' }, ticks:{ color:'#6b7280', font:{ size:10, family:"'Space Mono'" } } },
+        y: { grid:{ color:'rgba(0,0,0,.08)' }, ticks:{ color:'#6b7280', font:{ size:10, family:"'Space Mono'" }, callback: v => Math.round(v) + 'H' } }
       },
       interaction: { mode:'index', intersect:false }
     }
