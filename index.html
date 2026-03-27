@@ -245,7 +245,7 @@ const SHEET_ID = '1Ehrfma2NoEvGe6hCruDSsEUwVSZV2bXP';
 // 시트별 URL 생성
 // ══════════════════════════════════════════
 function sheetUrl(sheetName) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(sheetName)}`;
 }
 
 // ══════════════════════════════════════════
@@ -347,11 +347,20 @@ function buildData(fast, inf, hr) {
   // 인사정보 — 법인별 총원 + 전체 대상총원
   const corpTotalMap = {};
   let grandTotal = 0;  // 대상여부=TRUE 전체 합계 (법인 무관)
+
+  // ── 디버그
+  console.warn('[DEBUG] 인사정보 전체 행수:', hr.length);
+  console.warn('[DEBUG] 첫3행 대상여부값:', hr.slice(0,3).map(r=>JSON.stringify(r['대상여부'])));
+  const flagCounts = {};
+  hr.forEach(r=>{ const v=String(r['대상여부']); flagCounts[v]=(flagCounts[v]||0)+1; });
+  console.warn('[DEBUG] 대상여부 값 분포:', JSON.stringify(flagCounts));
+  // ── 디버그 끝
+
   hr.forEach(r => {
     const flag = r['대상여부'];
-    const isTarget = flag === 'TRUE';  // 엑셀 =COUNTIF(인사정보!AF:AF,TRUE)와 동일
+    const isTarget = flag === 'TRUE';
     if (isTarget) {
-      grandTotal++;  // 전체 합계는 법인 필터 없이
+      grandTotal++;
       const c = r['법인구분'];
       if (c && VALID_CORPS.includes(c)) corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
     }
