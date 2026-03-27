@@ -245,7 +245,7 @@ const SHEET_ID = '1Ehrfma2NoEvGe6hCruDSsEUwVSZV2bXP';
 // 시트별 URL 생성
 // ══════════════════════════════════════════
 function sheetUrl(sheetName) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(sheetName)}`;
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 }
 
 // ══════════════════════════════════════════
@@ -274,7 +274,7 @@ function fetchSheet(sheetName) {
     Papa.parse(sheetUrl(sheetName), {
       download: true,
       header: true,
-      skipEmptyLines: 'greedy',
+      skipEmptyLines: true,
       complete: r => resolve(r.data),
       error: e => reject(e)
     });
@@ -344,28 +344,19 @@ function buildData(fast, inf, hr) {
   fast.forEach(r => { r._month = toMonth(r['접속년월']); });
   inf.forEach(r => { r._month = toMonth(r['접속년월'] || r['학습시작 일자']); });
 
-  // 인사정보 — 법인별 총원 + 전체 대상총원
+  // 인사정보 — 법인별 총원
   const corpTotalMap = {};
-  let grandTotal = 0;  // 대상여부=TRUE 전체 합계 (법인 무관)
-
-  // 구글 시트 CSV는 TRUE/true·공백·NBSP·불리언 등으로 섞여 내보낼 수 있음 (=COUNTIF(...,TRUE)와 맞추기 위해 정규화)
-  function isHrTargetFlag(flag) {
-    if (flag === true || flag === 1) return true;
-    const s = String(flag ?? '')
-      .trim()
-      .replace(/\u00a0/g, '')
-      .toUpperCase();
-    return s === 'TRUE' || s === '1';
-  }
 
   hr.forEach(r => {
-    const isTarget = isHrTargetFlag(r['대상여부']);
-    if (isTarget) {
-      grandTotal++;
+    const flag = r['대상여부'];
+    if (flag === 'TRUE') {
       const c = r['법인구분'];
       if (c && VALID_CORPS.includes(c)) corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
     }
   });
+
+  // grandTotal: 법인별 합산 (gviz CSV 파싱 오차 없이 정확하게)
+  const grandTotal = Object.values(corpTotalMap).reduce((s, v) => s + v, 0);
 
   // 유효 법인 목록
   const corps = VALID_CORPS.filter(c =>
