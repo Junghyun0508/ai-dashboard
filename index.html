@@ -251,6 +251,20 @@ let chartInst = null;
 const VALID_CORPS = ['5minlab','Dreamotion','Flyway Games','JOFSOFT','KRAFTON HQ','Loonshot Games',
   'OVERDARE','Olivetree Games','Omni Craftlabs','PUBG STUDIOS','ReLU Games',
   'Rising Wings','bluehole studio','inZOI studio','기타(해외파견)'];
+
+// 시트/엑셀의 법인구분이 끝공백·NBSP·zero-width·연속공백 등으로 살짝 다르면 includes()에서만 탈락함 (전사 총원은 맞는데 법인별만 1명 적게 보임)
+function canonicalCorpName(raw) {
+  if (raw == null || raw === '') return null;
+  const s = String(raw)
+    .replace(/[\u200b-\u200d\ufeff]/g, '')
+    .replace(/\u00a0/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+  if (VALID_CORPS.includes(s)) return s;
+  const hit = VALID_CORPS.find(v => v.toLowerCase() === s.toLowerCase());
+  return hit || null;
+}
+
 function normalizeId(email) {
   if (!email) return null;
   return String(email).split('@')[0].toLowerCase().trim();
@@ -417,14 +431,14 @@ function buildData(fast, inf, hr) {
     const isTarget = isHrTargetFlag(r['대상여부']);
     if (isTarget) {
       grandTotal++;
-      const c = r['법인구분'];
-      if (c && VALID_CORPS.includes(c)) corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
+      const c = canonicalCorpName(r['법인구분']);
+      if (c) corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
     }
   });
 
   // 유효 법인 목록
   const corps = VALID_CORPS.filter(c =>
-    fast.some(r => r['법인구분'] === c) || inf.some(r => r['법인구분'] === c)
+    fast.some(r => canonicalCorpName(r['법인구분']) === c) || inf.some(r => canonicalCorpName(r['법인구분']) === c)
   );
 
   return { fast, inf, hr, corpTotalMap, grandTotal, corps, updateStr };
@@ -480,7 +494,10 @@ function setTab(tab) {
 // 필터 헬퍼
 // ══════════════════════════════════════════
 function filtered(arr) {
-  return arr.filter(r => selectedCorps.includes(r['법인구분']));
+  return arr.filter(r => {
+    const c = canonicalCorpName(r['법인구분']);
+    return c && selectedCorps.includes(c);
+  });
 }
 function getFast() { return currentTab === 'inf'  ? [] : filtered(DATA.fast); }
 function getInf()  { return currentTab === 'fast' ? [] : filtered(DATA.inf);  }
@@ -597,7 +614,7 @@ function renderCorpTable() {
   function corpEnrolled(arr) {
     const m = {};
     arr.filter(r => r['활성여부(최초1회)'] == 1 || r['활성여부(최초1회)'] === 'TRUE').forEach(r => {
-      const c = r['법인구분'], u = normalizeId(r['메일주소']) || r['사번'];
+      const c = canonicalCorpName(r['법인구분']), u = normalizeId(r['메일주소']) || r['사번'];
       if (c && u) { if (!m[c]) m[c] = new Set(); m[c].add(u); }
     });
     return m;
@@ -673,7 +690,7 @@ function renderDOWBars(id, map, color) {
 function renderDept() {
   function deptAgg(arr) {
     const m = {};
-    arr.filter(r => r['법인구분'] === 'KRAFTON HQ').forEach(r => {
+    arr.filter(r => canonicalCorpName(r['법인구분']) === 'KRAFTON HQ').forEach(r => {
       const d = r['본부구분'] || '기타';
       if (!m[d]) m[d] = { hours: 0, users: new Set() };
       m[d].hours += parseFloat(r['학습시간(H)']) || 0;
