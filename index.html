@@ -344,34 +344,25 @@ function buildData(fast, inf, hr) {
   fast.forEach(r => { r._month = toMonth(r['접속년월']); });
   inf.forEach(r => { r._month = toMonth(r['접속년월'] || r['학습시작 일자']); });
 
-  // 인사정보 — 법인별 총원 (대상여부 == 1 또는 'TRUE')
+  // 인사정보 — 법인별 총원 + 전체 대상총원
   const corpTotalMap = {};
+  let grandTotal = 0;  // 대상여부=TRUE 전체 합계 (법인 무관)
   hr.forEach(r => {
     const flag = r['대상여부'];
-    // 구글 시트 CSV에서 TRUE/FALSE 문자열로 내려옴
     const isTarget = flag === true || flag === 'TRUE' || flag === 'True' || flag == 1 || flag === '1';
     if (isTarget) {
+      grandTotal++;  // 전체 합계는 법인 필터 없이
       const c = r['법인구분'];
       if (c && VALID_CORPS.includes(c)) corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
     }
   });
-
-  // 기타(해외파견): 인사정보에 없으므로 패스트캠퍼스 등록 인원 수로 총원 보정
-  if (!corpTotalMap['기타(해외파견)']) {
-    const etcSet = new Set();
-    fast.filter(r => r['법인구분'] === '기타(해외파견)').forEach(r => {
-      const u = normalizeId(r['메일주소']) || r['사번'];
-      if (u) etcSet.add(u);
-    });
-    if (etcSet.size > 0) corpTotalMap['기타(해외파견)'] = etcSet.size;
-  }
 
   // 유효 법인 목록
   const corps = VALID_CORPS.filter(c =>
     fast.some(r => r['법인구분'] === c) || inf.some(r => r['법인구분'] === c)
   );
 
-  return { fast, inf, hr, corpTotalMap, corps, updateStr };
+  return { fast, inf, hr, corpTotalMap, grandTotal, corps, updateStr };
 }
 
 // ══════════════════════════════════════════
@@ -461,7 +452,11 @@ function renderAll() {
 function renderKPI() {
   const fastArr = getFast(), infArr = getInf();
   const fastH = sumHours(fastArr), infH = sumHours(infArr);
-  const totalCount = selectedCorps.reduce((s, c) => s + (DATA.corpTotalMap[c] || 0), 0);
+  // 전체 선택 시 grandTotal, 일부 선택 시 선택 법인 합산
+  const allSelected = selectedCorps.length === DATA.corps.length;
+  const totalCount = allSelected
+    ? DATA.grandTotal
+    : selectedCorps.reduce((s, c) => s + (DATA.corpTotalMap[c] || 0), 0);
   const fastSet = enrolledSet(fastArr), infSet = enrolledSet(infArr);
   const merged = new Set([...fastSet, ...infSet]);
   const enrolled = currentTab === 'fast' ? fastSet.size : currentTab === 'inf' ? infSet.size : merged.size;
