@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 역량강화 교육 이용 현황</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Space+Mono:wght@400;700&display=swap');
 :root {
@@ -242,13 +241,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 const SHEET_ID = '1Ehrfma2NoEvGe6hCruDSsEUwVSZV2bXP';
 
 // ══════════════════════════════════════════
-// 시트별 URL 생성
-// ══════════════════════════════════════════
-function sheetUrl(sheetName) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-}
-
-// ══════════════════════════════════════════
 // 전역 상태
 // ══════════════════════════════════════════
 let DATA = null;
@@ -267,17 +259,80 @@ function normalizeId(email) {
 const DOW_ORDER = ['월','화','수','목','금','토','일'];
 
 // ══════════════════════════════════════════
-// CSV fetch → 파싱 (PapaParse)
+// 구글 시트 → JSON (gviz + JSONP)
+// Papa.parse(download)는 GitHub Pages 등 교차 출처에서 CORS로 실패함.
+// 스크립트 태그 로드는 CORS 제한이 없어 동일 HTML이 Pages에서도 동작함.
 // ══════════════════════════════════════════
+function gvizCellValue(cell) {
+  if (cell == null) return '';
+  if (cell.v instanceof Date) return cell.v;
+  if (cell.v !== null && cell.v !== undefined && cell.v !== '') return cell.v;
+  if (cell.f != null && cell.f !== '') return cell.f;
+  return '';
+}
+
+function gvizToObjects(response) {
+  if (!response) throw new Error('시트 응답이 비어 있습니다.');
+  if (response.status === 'error') {
+    const msg = (response.errors || [])
+      .map(e => e.detailed_message || e.message || e.reason)
+      .filter(Boolean)
+      .join(' ') || '시트를 읽을 수 없습니다.';
+    throw new Error(msg);
+  }
+  const table = response.table;
+  if (!table || !table.cols) return [];
+  const cols = table.cols.map((c, i) => String(c.label || c.id || `col${i}`).trim());
+  return (table.rows || []).map(row => {
+    const obj = {};
+    cols.forEach((key, i) => {
+      const cell = row.c && row.c[i];
+      obj[key] = gvizCellValue(cell);
+    });
+    return obj;
+  });
+}
+
 function fetchSheet(sheetName) {
   return new Promise((resolve, reject) => {
-    Papa.parse(sheetUrl(sheetName), {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: r => resolve(r.data),
-      error: e => reject(e)
-    });
+    const oldGoogle = window.google;
+    let settled = false;
+    const script = document.createElement('script');
+
+    function cleanup() {
+      window.google = oldGoogle;
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    function finish(err, data) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      cleanup();
+      if (err) reject(err);
+      else resolve(data);
+    }
+
+    const timeout = setTimeout(() => finish(new Error('시트 로딩 시간 초과: ' + sheetName)), 60000);
+
+    window.google = {
+      visualization: {
+        Query: {
+          setResponse(response) {
+            try {
+              const data = gvizToObjects(response);
+              setTimeout(() => finish(null, data), 0);
+            } catch (e) {
+              setTimeout(() => finish(e), 0);
+            }
+          }
+        }
+      }
+    };
+
+    script.onerror = () => finish(new Error('네트워크 오류(차단 또는 시트 이름 확인): ' + sheetName));
+    script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(sheetName)}`;
+    document.head.appendChild(script);
   });
 }
 
@@ -344,19 +399,28 @@ function buildData(fast, inf, hr) {
   fast.forEach(r => { r._month = toMonth(r['접속년월']); });
   inf.forEach(r => { r._month = toMonth(r['접속년월'] || r['학습시작 일자']); });
 
-  // 인사정보 — 법인별 총원
+  // 인사정보 — 법인별 총원 + 전체 대상총원
   const corpTotalMap = {};
+  let grandTotal = 0;  // 대상여부=TRUE 전체 합계 (법인 무관)
+
+  // 구글 시트 CSV는 TRUE/true·공백·NBSP·불리언 등으로 섞여 내보낼 수 있음 (=COUNTIF(...,TRUE)와 맞추기 위해 정규화)
+  function isHrTargetFlag(flag) {
+    if (flag === true || flag === 1) return true;
+    const s = String(flag ?? '')
+      .trim()
+      .replace(/\u00a0/g, '')
+      .toUpperCase();
+    return s === 'TRUE' || s === '1';
+  }
 
   hr.forEach(r => {
-    const flag = r['대상여부'];
-    if (flag === 'TRUE') {
+    const isTarget = isHrTargetFlag(r['대상여부']);
+    if (isTarget) {
+      grandTotal++;
       const c = r['법인구분'];
       if (c && VALID_CORPS.includes(c)) corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
     }
   });
-
-  // grandTotal: 법인별 합산 (gviz CSV 파싱 오차 없이 정확하게)
-  const grandTotal = Object.values(corpTotalMap).reduce((s, v) => s + v, 0);
 
   // 유효 법인 목록
   const corps = VALID_CORPS.filter(c =>
