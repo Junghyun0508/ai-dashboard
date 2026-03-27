@@ -5,123 +5,153 @@
     <title>AI 역량강화 교육 이용 현황</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; margin: 0; padding: 10px; color: #333; }
-        .dashboard { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border: 1px solid #ccc; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #0b0e14; color: #ffffff; margin: 0; padding: 20px; }
+        .container { max-width: 1800px; margin: auto; }
         
-        /* 헤더 블랙 바 */
-        .black-header { background: #000; color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; margin-bottom: 20px; border-radius: 4px; }
-        .kpi-container { display: flex; gap: 20px; }
-        .kpi-box { text-align: center; border-left: 1px solid #444; padding-left: 20px; }
-        .kpi-title { font-size: 11px; color: #aaa; }
-        .kpi-value { font-size: 18px; font-weight: bold; color: #00f2ff; }
+        /* 상단 헤더 및 KPI 영역 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #2d333b; padding-bottom: 10px; }
+        .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .kpi-card { background: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; text-align: left; }
+        .kpi-label { font-size: 13px; color: #8b949e; margin-bottom: 8px; }
+        .kpi-value { font-size: 28px; font-weight: bold; color: #58a6ff; }
+        .kpi-sub { font-size: 12px; color: #484f58; margin-top: 5px; }
 
-        /* 메인 레이아웃 (차트 + 우측 요약) */
-        .main-content { display: grid; grid-template-columns: 3fr 1fr; gap: 20px; }
-        .charts-column { display: flex; flex-direction: column; gap: 15px; }
-        
-        .chart-wrapper { background: #fff; border: 1px solid #e1e4e8; padding: 10px; border-radius: 8px; height: 260px; position: relative; }
-        .chart-header { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-        .tag-fc { color: #e74c3c; } .tag-in { color: #2ecc71; }
+        /* 차트 및 테이블 레이아웃 */
+        .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .section-card { background: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; margin-bottom: 20px; }
+        h2 { font-size: 16px; margin-top: 0; color: #c9d1d9; border-left: 4px solid #58a6ff; padding-left: 10px; margin-bottom: 20px; }
 
-        /* 우측 정보 패널 */
-        .side-panel { background: #f8f9fa; border: 1px solid #e1e4e8; padding: 15px; border-radius: 8px; font-size: 12px; }
-        .side-panel h3 { font-size: 14px; margin-top: 0; border-bottom: 2px solid #333; padding-bottom: 5px; }
-        .info-group { margin-bottom: 20px; }
-        .trend-item { display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed #ccc; padding-bottom: 3px; }
+        /* 테이블 스타일 */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; color: #8b949e; padding: 10px; border-bottom: 1px solid #30363d; }
+        td { padding: 10px; border-bottom: 1px solid #21262d; }
+        .text-blue { color: #58a6ff; font-weight: bold; }
 
-        /* 섹션 타이틀 */
-        .section-title { background: #e1e4e8; padding: 5px 10px; font-weight: bold; font-size: 14px; margin: 20px 0 10px 0; }
+        /* 차트 높이 조절 */
+        .chart-box { height: 300px; position: relative; }
     </style>
 </head>
 <body>
 
-<div class="dashboard">
-    <div class="black-header">
-        <div style="font-size: 20px; font-weight: bold;">AI 역량강화 교육 이용 현황 🤖</div>
-        <div class="kpi-container">
-            <div style="font-size: 12px; margin-right: 20px;">update : 2026-03-20</div>
-            <div class="kpi-box"><div class="kpi-title">대상총원</div><div class="kpi-value">2,787 명</div></div>
-            <div class="kpi-box"><div class="kpi-title">수강인원</div><div class="kpi-value">1,017 명</div></div>
-            <div class="kpi-box"><div class="kpi-title">사용률</div><div class="kpi-value">36.5%</div></div>
+<div class="container">
+    <div class="header">
+        <div style="font-size: 20px; font-weight: bold;">AI 역량강화 교육 <span style="color:#58a6ff">이용 현황</span></div>
+        <div style="font-size: 12px; color: #8b949e;">UPDATE: 2026-03-27</div>
+    </div>
+
+    <div class="kpi-row">
+        <div class="kpi-card">
+            <div class="kpi-label">대상 총원 (A)</div>
+            <div class="kpi-value">2,778</div>
+            <div class="kpi-sub">14개 법인 전체</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">수강 인원 (B)</div>
+            <div class="kpi-value">1,014</div>
+            <div class="kpi-sub">1회 이상 사용한 인원</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">사용률 (B/A)</div>
+            <div class="kpi-value" style="color: #3fb950;">36.5%</div>
+            <div class="kpi-sub">전체 법인 기준</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">총 학습 시간</div>
+            <div class="kpi-value" style="color: #bc8cff;">4,867H</div>
+            <div class="kpi-sub">패스트캠퍼스 + 인프런 합계</div>
         </div>
     </div>
 
-    <div class="section-title">① 법인 & 기간별 이용 현황 (주차별 요약)</div>
-
-    <div class="main-content">
-        <div class="charts-column">
-            <div class="chart-wrapper">
-                <div class="chart-header"><span class="tag-fc">●</span> Fast Campus</div>
-                <canvas id="fcChart"></canvas>
+    <div class="content-grid">
+        <div class="left-col">
+            <div class="section-card">
+                <h2>■ 월별/주차별 학습 시간 추이</h2>
+                <div class="chart-box">
+                    <canvas id="mainChart"></canvas>
+                </div>
             </div>
-            <div class="chart-wrapper">
-                <div class="chart-header"><span class="tag-in">●</span> Inflearn</div>
-                <canvas id="inflearnChart"></canvas>
+            
+            <div class="section-card">
+                <h2>■ 법인별 이용 현황</h2>
+                <table>
+                    <thead>
+                        <tr><th>소속</th><th>총원(A)</th><th>수강인원(B)</th><th>사용률</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>KRAFTON HQ</td><td>1,263</td><td>481</td><td class="text-blue">38.1%</td></tr>
+                        <tr><td>PUBG STUDIOS</td><td>661</td><td>235</td><td class="text-blue">35.6%</td></tr>
+                        <tr><td>bluehole studio</td><td>151</td><td>73</td><td class="text-blue">48.3%</td></tr>
+                        <tr><td>5minlab</td><td>113</td><td>22</td><td class="text-blue">19.5%</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="side-panel">
-            <div class="info-group">
-                <h3>격주 별 사용률 변화 추이</h3>
-                <div class="trend-item"><span>총합</span><strong>980명 (+0.5%p)</strong></div>
-                <div class="trend-item"><span>패스트캠퍼스</span><strong>831명 (+0.4%p)</strong></div>
-                <div class="trend-item"><span>인프런</span><strong>418명 (+0.3%p)</strong></div>
+        <div class="right-col">
+            <div class="section-card">
+                <h2>■ 요일별 학습 시간</h2>
+                <div class="chart-box" style="height: 250px;">
+                    <canvas id="dayChart"></canvas>
+                </div>
             </div>
-            <div class="info-group">
-                <h3>향후 업데이트 날짜</h3>
-                <div style="color: #007bff; font-weight: bold;">2026. 4. 6 (2주 후)</div>
-            </div>
-            <div class="info-group">
-                <h3>비고</h3>
-                <p style="font-size: 11px; line-height: 1.6;">- AI 역량 교육 전환<br>- KLT 안내 메일 발송<br>- 신규 콘텐츠 추가 안내</p>
+            <div class="section-card">
+                <h2>■ 인기 강의 TOP 5</h2>
+                <div style="font-size: 12px; line-height: 2;">
+                    1. ChatGPT & GPTs 바이블<br>
+                    2. 업무 자동화 with Claude<br>
+                    3. AI: Gemini 바이블<br>
+                    4. 비전공자를 위한 ChatGPT<br>
+                    5. LangChain 입문하기
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // 주차별 축약 데이터
-    const labels = ['9월4주', '10월1주', '10월2주', '10월3주', '10월4주', '11월1주', '11월2주', '11월3주', '12월1주', '1월1주'];
     const commonOptions = {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: { legend: { labels: { color: '#c9d1d9' } } },
         scales: {
-            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-            y: { beginAtZero: true, ticks: { font: { size: 10 } } }
+            x: { grid: { color: '#30363d' }, ticks: { color: '#8b949e' } },
+            y: { grid: { color: '#30363d' }, ticks: { color: '#8b949e' } }
         }
     };
 
-    // Fast Campus 차트
-    new Chart(document.getElementById('fcChart'), {
-        type: 'line',
+    // 메인 추이 차트
+    new Chart(document.getElementById('mainChart'), {
+        type: 'bar',
         data: {
-            labels: labels,
-            datasets: [{
-                data: [372, 143, 102, 149, 243, 250, 279, 396, 534, 247],
-                borderColor: '#e74c3c',
-                backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]
+            labels: ['9월 4주', '10월 1주', '10월 2주', '10월 3주', '10월 4주', '11월 1주'],
+            datasets: [
+                { label: '패스트캠퍼스', data: [372, 143, 102, 149, 243, 250], backgroundColor: '#58a6ff' },
+                { label: '인프런', data: [53, 35, 28, 45, 62, 70], backgroundColor: '#3fb950' }
+            ]
         },
         options: commonOptions
     });
 
-    // Inflearn 차트
-    new Chart(document.getElementById('inflearnChart'), {
-        type: 'line',
+    // 요일별 차트 (가로 바)
+    new Chart(document.getElementById('dayChart'), {
+        type: 'bar',
         data: {
-            labels: labels,
+            labels: ['월', '화', '수', '목', '금'],
             datasets: [{
-                data: [53, 35, 28, 45, 62, 70, 85, 92, 110, 58],
-                borderColor: '#2ecc71',
-                backgroundColor: 'rgba(46, 204, 113, 0.1)',
-                fill: true,
-                tension: 0.4
+                data: [650, 590, 800, 810, 560],
+                backgroundColor: '#bc8cff'
             }]
         },
-        options: commonOptions
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: '#30363d' }, ticks: { color: '#8b949e' } },
+                y: { grid: { display: false }, ticks: { color: '#8b949e' } }
+            }
+        }
     });
 </script>
 
