@@ -274,7 +274,7 @@ function fetchSheet(sheetName) {
     Papa.parse(sheetUrl(sheetName), {
       download: true,
       header: true,
-      skipEmptyLines: true,
+      skipEmptyLines: 'greedy',
       complete: r => resolve(r.data),
       error: e => reject(e)
     });
