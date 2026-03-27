@@ -245,7 +245,7 @@ const SHEET_ID = '1Ehrfma2NoEvGe6hCruDSsEUwVSZV2bXP';
 // 시트별 URL 생성
 // ══════════════════════════════════════════
 function sheetUrl(sheetName) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(sheetName)}`;
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(sheetName)}`;
 }
 
 // ══════════════════════════════════════════
