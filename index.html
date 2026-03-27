@@ -342,13 +342,22 @@ function parseLearningDate(v) {
   }
   if (typeof v === 'number' && isFinite(v)) {
     const n = v;
+    // 엑셀/시트 일련번호(대략 1990~2040년)
     if (n > 20000 && n < 80000) {
       const utc = Date.UTC(1899, 11, 30) + Math.floor(n) * 86400000;
       const d = new Date(utc);
       if (!isNaN(d.getTime())) return d;
     }
-    const d = new Date(n);
-    return isNaN(d.getTime()) ? null : d;
+    // 밀리초·초 단위 타임스탬프 (수강인원·학습시간(초) 등 작은 숫은 new Date(n) → 1970년으로 잘못 됨)
+    if (n >= 1e12) {
+      const d = new Date(n);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    if (n >= 1e9 && n < 1e12) {
+      const d = new Date(n * 1000);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
   }
   const s = String(v).trim().replace(/\u00a0/g, ' ');
   if (/^\d+(\.\d+)?$/.test(s)) {
@@ -357,6 +366,14 @@ function parseLearningDate(v) {
       const utc = Date.UTC(1899, 11, 30) + Math.floor(num) * 86400000;
       const d = new Date(utc);
       if (!isNaN(d.getTime())) return d;
+    }
+    if (num >= 1e12) {
+      const d = new Date(num);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    if (num >= 1e9 && num < 1e12) {
+      const d = new Date(num * 1000);
+      return isNaN(d.getTime()) ? null : d;
     }
   }
   let m = s.match(/^Date\((\d+),(\d+),(\d+)\)$/);
@@ -380,6 +397,9 @@ function parseLearningDate(v) {
 function toMonthKey(v) {
   const d = parseLearningDate(v);
   if (!d) return null;
+  const y = d.getFullYear();
+  // 잘못된 열(수강인원·sum_time 등)이 숫자로 파싱돼 1970년으로 묶이는 것 방지
+  if (y < 1985 || y > 2050) return null;
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
@@ -422,14 +442,20 @@ function guessMonthFromRow(r) {
   return null;
 }
 
-/** 첫 열 실패 시 날짜로 보이는 열만 스캔해 YYYY-MM (월별 차트용) */
+/** 월 추론 폴백에서 제외 — 열 이름에 date/time이 들어가도 숫자는 인원·시간·건수인 경우가 많음 */
+function isNonDateColumnForMonthKey(key) {
+  return /수강인원|Course\s*수강|^수강\s*\(|인원\(명\)|활성여부|활성|사번|메일주소|member_email|course_content_id|course_id|product_id|유닛|순서|개수|봤어요|sum_(range|interval)|interval_time|range_time|학습시간\(H\)|^학습시간$/i.test(key);
+}
+
+/** 첫 열 실패 시에만: 열 이름이 실제 일시인 경우만 스캔 (수강인원·sum_range_time 등은 제외) */
 function inferMonthKeyForRow(r) {
   let k = toMonthKey(guessMonthFromRow(r));
   if (k) return k;
   for (const [key, val] of Object.entries(r)) {
     if (key === '_month' || key.startsWith('_')) continue;
     if (val == null || val === '') continue;
-    if (!/(date|time|일|시작|접속|created|년월|학습|month|kst|datetime|at_|_at|timestamp|day|완료|갱신|수강)/i.test(key)) continue;
+    if (isNonDateColumnForMonthKey(key)) continue;
+    if (!/(접속년월|년월|학습시작|일자|datetime|created_at|updated_at|completed_at|session_date|learning_date|view_date|접속일|접속일시|start_date|start_time|progress_at|kst|수강일|수강시|수강시작|timestamp|at_kst|_at$|date$|time_kst)/i.test(key)) continue;
     k = toMonthKey(val);
     if (k) return k;
   }
