@@ -118,6 +118,8 @@ tbody tr:last-child td{border-bottom:none;}
 hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 .footnote{font-size:11px;color:var(--muted);margin-top:10px;border-top:1px solid var(--border);padding-top:9px;line-height:1.7;}
 .empty{text-align:center;padding:28px;color:var(--muted);font-size:12px;}
+#dataWarning{display:none;background:#fff8e6;border:1px solid #e8d4a8;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.65;color:#4a3d12;}
+#dataWarning code{font-size:11px;background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px;}
 </style>
 </head>
 <body>
@@ -178,6 +180,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
     <div class="kpi c3"><div class="kpi-lbl">사용률 (B/A)</div><div class="kpi-val" id="kpiRate">—</div><div class="kpi-sub">선택 법인 기준</div></div>
     <div class="kpi c4"><div class="kpi-lbl">총 학습 시간</div><div class="kpi-val" id="kpiHours">—</div><div class="kpi-sub" id="kpiHoursSub">—</div></div>
   </div>
+  <div id="dataWarning"></div>
   <div id="sourceNote" class="footnote" style="display:none;margin-bottom:14px;padding:12px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);line-height:1.65;"></div>
 
   <!-- ① 법인·기간별 — 이중축 선그래프 -->
@@ -408,6 +411,7 @@ function getField(r, ...keys) {
 }
 
 function guessMonthFromRow(r) {
+  // xlsm V1.2·피벗: 월 축은 접속년월(파생) 기준. 비어 있으면 패스트 created_at_kst·인프런 학습시작 일자 등으로 보조
   const v = getField(r, '접속년월', '접속 년월', '년월', '학습시작 일자', '학습시작일자', '접속일자', 'created_at_kst', '학습시작일', 'start_date', '접속일시',
     'created_at', 'updated_at', 'completed_at', 'session_date', 'learning_date', 'view_date', '수강일', '수강일시', '수강시작일', 'progress_at', 'start_time_kst');
   if (v != null && v !== '') return v;
@@ -433,7 +437,8 @@ function inferMonthKeyForRow(r) {
 }
 
 function guessDeptName(r) {
-  const v = getField(r, '본부구분', '본부', '부서', '부문', 'Div', 'division');
+  // xlsm V1.2: 패스트·인프런 공통으로 본부구분 옆에 소속2(Workday 세부 조직) 존재
+  const v = getField(r, '본부구분', '소속2', '본부', '부서', '부문', 'Div', 'division');
   if (v != null && v !== '') return String(v).trim();
   for (const [k, val] of Object.entries(r)) {
     if (val == null || val === '') continue;
@@ -443,11 +448,11 @@ function guessDeptName(r) {
 }
 
 function getCorpFromRow(r) {
-  const v = getField(r, '법인구분', '회사', '소속', '법인');
+  const v = getField(r, '법인구분', '회사', '소속', '법인', 'company', 'corp', 'corp_name', 'organization', 'org_name', 'legal_entity', '소속법인');
   if (v != null && v !== '') return v;
   for (const [k, val] of Object.entries(r)) {
     if (val == null || val === '') continue;
-    if (/법인구분|^소속$|회사$/i.test(k)) return val;
+    if (/^법인구분$|^소속$|^회사$|company|corp_name|organization|legal_entity|소속법인/i.test(k) && !/course|mail|email|member_id|id$/i.test(k)) return val;
   }
   return null;
 }
@@ -463,13 +468,22 @@ function getMailKey(r) {
 }
 
 function guessDowRaw(r) {
-  const v = getField(r, '접속요일', '요일', '학습요일', 'weekday');
+  const v = getField(r, '접속요일', '요일', '학습요일', 'weekday', 'week_day', 'day_of_week', 'dow', 'weekday_kst', '요일명');
   if (v != null && v !== '') return v;
   for (const [k, val] of Object.entries(r)) {
     if (val == null || val === '') continue;
-    if (/(요일|weekday|day_of_week)/i.test(k)) return val;
+    if (/(요일|weekday|day_of_week|^dow$)/i.test(k) && !/date|datetime|created/i.test(k)) return val;
   }
   return null;
+}
+
+function isHrTargetFlag(flag) {
+  if (flag === true || flag === 1) return true;
+  const s = String(flag ?? '')
+    .trim()
+    .replace(/\u00a0/g, '')
+    .toUpperCase();
+  return s === 'TRUE' || s === '1';
 }
 
 // ══════════════════════════════════════════
@@ -607,6 +621,13 @@ async function loadData() {
     DATA.pivotInfCourseSum = pivotInf ? readPivotGrandTotalColB(pivotInf) : null;
     selectedCorps = [...DATA.corps];
 
+    if (!fast.length && inf.length) {
+      console.warn('[대시보드] 패스트캠퍼스 행이 0건입니다. 시트 탭 이름:', SHEET_TAB_FAST);
+    }
+    if (!inf.length && fast.length) {
+      console.warn('[대시보드] 인프런 행이 0건입니다. 시트 탭 이름:', SHEET_TAB_INF);
+    }
+
     buildChips();
     renderAll();
 
@@ -640,27 +661,17 @@ function buildData(fast, inf, hr) {
   fast.forEach(r => { r._month = inferMonthKeyForRow(r); });
   inf.forEach(r => { r._month = inferMonthKeyForRow(r); });
 
-  // 인사정보 — 법인별 총원 + 전체 대상총원
+  // 인사정보 — 법인별 총원 + 대상총원(A)
+  // Excel/피벗과 맞추기 위해: 대상여부=TRUE이면서 법인명이 VALID_CORPS에 매칭되는 인원만 집계(매칭 실패 행은 제외).
   const corpTotalMap = {};
-  let grandTotal = 0;  // 대상여부=TRUE 전체 합계 (법인 무관)
-
-  // 구글 시트 CSV는 TRUE/true·공백·NBSP·불리언 등으로 섞여 내보낼 수 있음 (=COUNTIF(...,TRUE)와 맞추기 위해 정규화)
-  function isHrTargetFlag(flag) {
-    if (flag === true || flag === 1) return true;
-    const s = String(flag ?? '')
-      .trim()
-      .replace(/\u00a0/g, '')
-      .toUpperCase();
-    return s === 'TRUE' || s === '1';
-  }
+  let grandTotal = 0;
 
   hr.forEach(r => {
-    const isTarget = isHrTargetFlag(getField(r, '대상여부', '대상 여부'));
-    if (isTarget) {
-      grandTotal++;
-      const c = canonicalCorpName(getCorpFromRow(r));
-      if (c) corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
-    }
+    if (!isHrTargetFlag(getField(r, '대상여부', '대상 여부'))) return;
+    const c = canonicalCorpName(getCorpFromRow(r));
+    if (!c) return;
+    grandTotal++;
+    corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
   });
 
   // 유효 법인 목록
@@ -745,9 +756,35 @@ function enrolledSet(arr) {
 // ══════════════════════════════════════════
 // 전체 렌더
 // ══════════════════════════════════════════
+function renderDataWarning() {
+  const el = document.getElementById('dataWarning');
+  if (!el || !DATA) return;
+  const parts = [];
+  if (DATA.fast.length === 0 && DATA.inf.length > 0) {
+    parts.push(`<strong>패스트캠퍼스</strong> 시트가 비어 있거나 탭 이름이 다릅니다. 구글 시트 하단 탭이 <code>${SHEET_TAB_FAST}</code>와 <strong>한 글자도 다르지 않게</strong> 맞춰 주세요. (인프런만 로드되면 그래프·표가 한쪽만 채워집니다.)`);
+  }
+  if (DATA.inf.length === 0 && DATA.fast.length > 0) {
+    parts.push(`<strong>인프런</strong> 시트 행이 0건입니다. 탭 이름: <code>${SHEET_TAB_INF}</code>`);
+  }
+  let unassigned = 0;
+  DATA.hr.forEach(r => {
+    if (isHrTargetFlag(getField(r, '대상여부', '대상 여부')) && !canonicalCorpName(getCorpFromRow(r))) unassigned++;
+  });
+  if (unassigned > 0) {
+    parts.push(`인사정보에서 <strong>대상여부=TRUE</strong>인데 법인명이 매칭되지 않는 행이 <strong>${unassigned}명</strong> 있습니다. 대상총원(KPI)에는 <strong>VALID_CORPS에 맞는 인원만</strong> 포함됩니다.`);
+  }
+  const fhq = DATA.fast.filter(r => canonicalCorpName(getCorpFromRow(r)) === 'KRAFTON HQ').length;
+  if (DATA.fast.length > 0 && fhq === 0) {
+    parts.push(`패스트캠퍼스 로그에 <strong>KRAFTON HQ</strong> 법인 행이 없습니다. ② 본부별 차트는 HQ만 집계하므로 비어 있을 수 있습니다.`);
+  }
+  el.innerHTML = parts.join('<br><br>');
+  el.style.display = parts.length ? 'block' : 'none';
+}
+
 function renderAll() {
   if (!DATA) return;
   document.getElementById('updateDate').textContent = DATA.updateStr;
+  renderDataWarning();
   renderSourceNote();
   renderKPI();
   renderMonthly();
@@ -764,6 +801,7 @@ function renderSourceNote() {
   if (!el) return;
   const lines = [];
   lines.push(`이 HTML의 <strong>수강 인원(B)</strong>은 원본 시트 <strong>${SHEET_TAB_FAST}·${SHEET_TAB_INF}</strong> 로그에서 <strong>고유 이용자</strong>(1회 이상)로 집계합니다. <code>${SHEET_PIVOT_FAST_DOW}</code>의「Course 수강 인원」같은 피벗 값은 보통 <strong>강좌(코스) 건수 합</strong>이라, 한 사람이 여러 강좌를 들으면 합계가 더 커질 수 있습니다.`);
+  lines.push(`엑셀 V1.2와 동일한 열 기준: 월은 <code>접속년월</code> 우선(없으면 <code>created_at_kst</code>·<code>학습시작 일자</code> 등), 법인은 <code>법인구분</code>, 본부 표시는 <code>본부구분</code>·<code>소속2</code>.`);
   if (DATA.pivotFastCourseSum != null) {
     lines.push(`구글 시트 <code>${SHEET_PIVOT_FAST_DOW}</code>의 <strong>Grand Total</strong> 두 번째 열 값: <strong>${DATA.pivotFastCourseSum.toLocaleString()}</strong>. 엑셀(예: 2209)과 다르면 <strong>시트</strong>에서 XLSM 재가져오기, 피벗 데이터 원본 범위, <strong>#REF!</strong>·깨진 수식을 먼저 수정해야 합니다. (HTML만으로는 구글 시트 내부 피벗을 고칠 수 없습니다.)`);
   }
