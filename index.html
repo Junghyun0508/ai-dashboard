@@ -170,6 +170,7 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
     <div class="kpi c3"><div class="kpi-lbl">사용률 (B/A)</div><div class="kpi-val" id="kpiRate">—</div><div class="kpi-sub">선택 법인 기준</div></div>
     <div class="kpi c4"><div class="kpi-lbl">총 학습 시간</div><div class="kpi-val" id="kpiHours">—</div><div class="kpi-sub" id="kpiHoursSub">—</div></div>
   </div>
+  <div id="sourceNote" class="footnote" style="display:none;margin-bottom:14px;padding:12px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);line-height:1.65;"></div>
 
   <!-- 월별 추이 -->
   <div class="panel" style="margin-bottom:12px;">
@@ -238,7 +239,17 @@ hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
 // ══════════════════════════════════════════
 // ① 구글 시트 ID — 여기만 바꾸면 됩니다
 // ══════════════════════════════════════════
-const SHEET_ID = '1Ehrfma2NoEvGe6hCruDSsEUwVSZV2bXP';
+// 구글 스프레드시트 ID (URL의 /d/ 이후 /edit 앞 문자열)
+const SHEET_ID = '1FPiXIDJHPjd4-96MKYXoUe-9Bvu70mD37noA55dXR74';
+
+// 원본 로그 시트 탭 이름 — 구글 시트 하단 탭과 한 글자라도 다르면 데이터를 못 읽습니다.
+const SHEET_TAB_FAST = '02_패스트캠퍼스';
+const SHEET_TAB_INF = '06_인프런';
+const SHEET_TAB_HR = '10_인사정보';
+
+// 피벗(요일) 시트 — Grand Total 참고용(없어도 대시보드는 동작)
+const SHEET_PIVOT_FAST_DOW = '03_F_피벗(요일)';
+const SHEET_PIVOT_INF_DOW = '07_I_피벗(요일)';
 
 // ══════════════════════════════════════════
 // 전역 상태
@@ -272,6 +283,62 @@ function normalizeId(email) {
 
 const DOW_ORDER = ['월','화','수','목','금','토','일'];
 
+// gviz 날짜: Date 객체 / 시리얼 숫자 / "2024. 9. 22" 같은 표시 문자열만 오는 경우 등 → new Date(v)만 쓰면 Invalid가 나와 월별·UPDATE가 비는 경우가 많음
+function parseLearningDate(v) {
+  if (v == null || v === '') return null;
+  if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
+  if (typeof v === 'object' && v !== null && 'year' in v && 'month' in v && 'day' in v) {
+    const d = new Date(v.year, v.month, v.day);
+    if (!isNaN(d.getTime())) return d;
+    const d2 = new Date(v.year, v.month - 1, v.day);
+    return isNaN(d2.getTime()) ? null : d2;
+  }
+  if (typeof v === 'number' && isFinite(v)) {
+    const n = v;
+    if (n > 20000 && n < 80000) {
+      const utc = Date.UTC(1899, 11, 30) + Math.floor(n) * 86400000;
+      const d = new Date(utc);
+      if (!isNaN(d.getTime())) return d;
+    }
+    const d = new Date(n);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const s = String(v).trim().replace(/\u00a0/g, ' ');
+  let m = s.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?/);
+  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, m[3] ? parseInt(m[3], 10) : 1);
+  m = s.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+  m = s.match(/^(\d{4})(\d{2})$/);
+  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, 1);
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function toMonthKey(v) {
+  const d = parseLearningDate(v);
+  if (!d) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function normalizeDowLabel(raw) {
+  if (raw == null || raw === '') return null;
+  const s = String(raw).trim().replace(/\u00a0/g, '').replace(/\s+/g, '');
+  if (DOW_ORDER.includes(s)) return s;
+  const full = { 월요일: '월', 화요일: '화', 수요일: '수', 목요일: '목', 금요일: '금', 토요일: '토', 일요일: '일' };
+  if (full[s]) return full[s];
+  const lower = s.toLowerCase();
+  const en = { monday: '월', tuesday: '화', wednesday: '수', thursday: '목', friday: '금', saturday: '토', sunday: '일', mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
+  if (en[lower]) return en[lower];
+  if (/^\d+$/.test(s)) {
+    const n = parseInt(s, 10);
+    const iso = { 1: '월', 2: '화', 3: '수', 4: '목', 5: '금', 6: '토', 7: '일' };
+    if (iso[n]) return iso[n];
+    const byJs = ['일', '월', '화', '수', '목', '금', '토'];
+    if (n >= 0 && n <= 6) return byJs[n];
+  }
+  return null;
+}
+
 // ══════════════════════════════════════════
 // 구글 시트 → JSON (gviz + JSONP)
 // Papa.parse(download)는 GitHub Pages 등 교차 출처에서 CORS로 실패함.
@@ -296,15 +363,45 @@ function gvizToObjects(response) {
   }
   const table = response.table;
   if (!table || !table.cols) return [];
-  const cols = table.cols.map((c, i) => String(c.label || c.id || `col${i}`).trim());
+  const seen = {};
+  const keys = table.cols.map((c, i) => {
+    let base = String(c.label || '').trim();
+    if (!base) base = String(c.id || `col${i}`);
+    seen[base] = (seen[base] || 0) + 1;
+    return seen[base] === 1 ? base : `${base}__${seen[base]}`;
+  });
   return (table.rows || []).map(row => {
     const obj = {};
-    cols.forEach((key, i) => {
+    keys.forEach((key, i) => {
       const cell = row.c && row.c[i];
       obj[key] = gvizCellValue(cell);
     });
     return obj;
   });
+}
+
+async function fetchSheetOptional(sheetName) {
+  try {
+    return await fetchSheet(sheetName);
+  } catch (e) {
+    console.warn('[시트 생략]', sheetName, e && e.message);
+    return null;
+  }
+}
+
+/** 피벗 시트에서 Grand Total 행의 B열(강좌 수 등 첫 집계열) 숫자 — 시트 정합성 점검용 */
+function readPivotGrandTotalColB(rows) {
+  if (!rows || !rows.length) return null;
+  for (const r of rows) {
+    const a = r.A;
+    if (a == null || a === '') continue;
+    if (!/grand\s*total/i.test(String(a).trim())) continue;
+    const b = r.B;
+    if (typeof b === 'number' && isFinite(b)) return b;
+    const p = parseFloat(String(b).replace(/,/g, '').replace(/\s/g, ''));
+    return isFinite(p) ? p : null;
+  }
+  return null;
 }
 
 function fetchSheet(sheetName) {
@@ -360,15 +457,21 @@ async function loadData() {
 
   try {
     document.getElementById('loadingSub').textContent = '패스트캠퍼스 시트 로딩 중...';
-    const fast = await fetchSheet('패스트캠퍼스');
+    const fast = await fetchSheet(SHEET_TAB_FAST);
 
     document.getElementById('loadingSub').textContent = '인프런 시트 로딩 중...';
-    const inf = await fetchSheet('인프런');
+    const inf = await fetchSheet(SHEET_TAB_INF);
 
     document.getElementById('loadingSub').textContent = '인사정보 시트 로딩 중...';
-    const hr = await fetchSheet('인사정보');
+    const hr = await fetchSheet(SHEET_TAB_HR);
+
+    document.getElementById('loadingSub').textContent = '피벗(요일) 시트 확인 중...';
+    const pivotFast = await fetchSheetOptional(SHEET_PIVOT_FAST_DOW);
+    const pivotInf = await fetchSheetOptional(SHEET_PIVOT_INF_DOW);
 
     DATA = buildData(fast, inf, hr);
+    DATA.pivotFastCourseSum = pivotFast ? readPivotGrandTotalColB(pivotFast) : null;
+    DATA.pivotInfCourseSum = pivotInf ? readPivotGrandTotalColB(pivotInf) : null;
     selectedCorps = [...DATA.corps];
 
     buildChips();
@@ -389,29 +492,23 @@ async function loadData() {
 // 데이터 전처리
 // ══════════════════════════════════════════
 function buildData(fast, inf, hr) {
-  // 날짜 → YYYY-MM
-  function toMonth(v) {
-    if (!v) return null;
-    const d = new Date(v);
-    if (isNaN(d)) return null;
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  function rowMonthSource(r) {
+    return r['접속년월'] ?? r['접속 년월'] ?? r['년월'] ?? r['학습시작 일자'] ?? r['학습시작일자'];
   }
 
   // 최신 날짜
   let maxDate = null;
   [...fast, ...inf].forEach(r => {
-    const raw = r['접속년월'] || r['학습시작 일자'];
-    if (!raw) return;
-    const d = new Date(raw);
-    if (!isNaN(d) && (!maxDate || d > maxDate)) maxDate = d;
+    const d = parseLearningDate(rowMonthSource(r));
+    if (d && (!maxDate || d > maxDate)) maxDate = d;
   });
   const updateStr = maxDate
     ? `${maxDate.getFullYear()}-${String(maxDate.getMonth()+1).padStart(2,'0')}-${String(maxDate.getDate()).padStart(2,'0')}`
     : '—';
 
-  // 접속년월 필드 보정 (인프런은 '학습시작 일자')
-  fast.forEach(r => { r._month = toMonth(r['접속년월']); });
-  inf.forEach(r => { r._month = toMonth(r['접속년월'] || r['학습시작 일자']); });
+  // 접속년월 → 차트용 YYYY-MM (gviz 표시 문자열·시리얼 등 대응)
+  fast.forEach(r => { r._month = toMonthKey(rowMonthSource(r)); });
+  inf.forEach(r => { r._month = toMonthKey(rowMonthSource(r)); });
 
   // 인사정보 — 법인별 총원 + 전체 대상총원
   const corpTotalMap = {};
@@ -521,6 +618,7 @@ function enrolledSet(arr) {
 function renderAll() {
   if (!DATA) return;
   document.getElementById('updateDate').textContent = DATA.updateStr;
+  renderSourceNote();
   renderKPI();
   renderMonthly();
   renderCorpTable();
@@ -528,6 +626,22 @@ function renderAll() {
   renderDept();
   renderCourses();
   updateLabels();
+}
+
+// ── 엑셀/피벗 vs 본 대시보드 지표 안내 (Confluence 게시 시 참고)
+function renderSourceNote() {
+  const el = document.getElementById('sourceNote');
+  if (!el) return;
+  const lines = [];
+  lines.push(`이 HTML의 <strong>수강 인원(B)</strong>은 원본 시트 <strong>${SHEET_TAB_FAST}·${SHEET_TAB_INF}</strong> 로그에서 <strong>고유 이용자</strong>(1회 이상)로 집계합니다. <code>${SHEET_PIVOT_FAST_DOW}</code>의「Course 수강 인원」같은 피벗 값은 보통 <strong>강좌(코스) 건수 합</strong>이라, 한 사람이 여러 강좌를 들으면 합계가 더 커질 수 있습니다.`);
+  if (DATA.pivotFastCourseSum != null) {
+    lines.push(`구글 시트 <code>${SHEET_PIVOT_FAST_DOW}</code>의 <strong>Grand Total</strong> 두 번째 열 값: <strong>${DATA.pivotFastCourseSum.toLocaleString()}</strong>. 엑셀(예: 2209)과 다르면 <strong>시트</strong>에서 XLSM 재가져오기, 피벗 데이터 원본 범위, <strong>#REF!</strong>·깨진 수식을 먼저 수정해야 합니다. (HTML만으로는 구글 시트 내부 피벗을 고칠 수 없습니다.)`);
+  }
+  if (DATA.pivotInfCourseSum != null) {
+    lines.push(`<code>${SHEET_PIVOT_INF_DOW}</code> Grand Total(두 번째 열): <strong>${DATA.pivotInfCourseSum.toLocaleString()}</strong>.`);
+  }
+  el.innerHTML = lines.join('<br><br>');
+  el.style.display = 'block';
 }
 
 // ── KPI
@@ -655,7 +769,11 @@ function renderCorpTable() {
 function renderDOW() {
   function dowAgg(arr) {
     const m = {};
-    arr.forEach(r => { const d = r['접속요일']; if (d) m[d] = (m[d] || 0) + (parseFloat(r['학습시간(H)']) || 0); });
+    arr.forEach(r => {
+      const raw = r['접속요일'] ?? r['요일'] ?? r['학습요일'];
+      const d = normalizeDowLabel(raw);
+      if (d) m[d] = (m[d] || 0) + (parseFloat(r['학습시간(H)']) || 0);
+    });
     return m;
   }
   const sec2 = document.getElementById('dowSection2');
