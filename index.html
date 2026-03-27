@@ -331,6 +331,10 @@ const DOW_ORDER = ['월','화','수','목','금','토','일'];
 // gviz 날짜: Date 객체 / 시리얼 숫자 / "2024. 9. 22" 같은 표시 문자열만 오는 경우 등 → new Date(v)만 쓰면 Invalid가 나와 월별·UPDATE가 비는 경우가 많음
 function parseLearningDate(v) {
   if (v == null || v === '') return null;
+  if (typeof v === 'object' && v !== null && !(v instanceof Date) && 'v' in v && !('year' in v)) {
+    if (v.v !== null && v.v !== undefined && v.v !== '') return parseLearningDate(v.v);
+    if (v.f != null && v.f !== '') return parseLearningDate(v.f);
+  }
   if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
   if (typeof v === 'object' && v !== null && 'year' in v && 'month' in v && 'day' in v) {
     const y = v.year;
@@ -388,6 +392,8 @@ function parseLearningDate(v) {
   if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
   m = s.match(/^(\d{4})(\d{2})$/);
   if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, 1);
+  m = s.match(/^(\d{4})[.\/](\d{1,2})$/);
+  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, 1);
   m = s.match(/(\d{4})\s*년\s*(\d{1,2})\s*월(?:\s*(\d{1,2})\s*일)?/);
   if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, m[3] ? parseInt(m[3], 10) : 1);
   const d = new Date(s);
@@ -422,10 +428,20 @@ function normalizeDowLabel(raw) {
   return null;
 }
 
+function normalizeHeaderKey(k) {
+  return String(k || '').replace(/\u00a0/g, ' ').trim().replace(/\s+/g, ' ');
+}
+
 // 시트 가져오기/엑셀 내보내기마다 열 이름이 조금씩 달라질 수 있음 — 직접 키 + 패턴으로 보조
 function getField(r, ...keys) {
   for (const k of keys) {
     if (k in r && r[k] != null && r[k] !== '') return r[k];
+  }
+  const cand = keys.map(k => normalizeHeaderKey(k).toLowerCase()).filter(Boolean);
+  for (const rk of Object.keys(r)) {
+    if (r[rk] == null || r[rk] === '') continue;
+    if (normalizeHeaderKey(rk).toLowerCase() === '') continue;
+    if (cand.includes(normalizeHeaderKey(rk).toLowerCase())) return r[rk];
   }
   return null;
 }
@@ -448,6 +464,28 @@ function isNonDateColumnForMonthKey(key) {
   return /수강인원|Course\s*수강|^수강\s*\(|인원\(명\)|활성여부|활성|사번|메일주소|member_email|course_content_id|course_id|product_id|유닛|순서|개수|봤어요|sum_(range|interval)|interval_time|range_time|학습시간\(H\)|^학습시간$/i.test(key);
 }
 
+/** col0·col13 등 이름 없는 열은 스캔 대상, 텍스트 ID·코스명 열은 건너뜀 */
+function isLikelyNonDateColumnKey(key) {
+  if (/^col\d+$/i.test(key)) return false;
+  return /member_id|member_email|member_name|product_id|product_name|course_id|course_name|managedCat|exposedCat|course_content|메일주소|이름|강의|코스|유닛|법인|본부|사번/i.test(key);
+}
+
+/**
+ * gviz가 헤더를 비우면 키가 col0·col13처럼만 오고, 열 이름 기반 추론이 전부 실패할 수 있음.
+ * 열 순서(객체 삽입 순서)대로 보며, 날짜로만 파싱되는 첫 값을 월 키로 씀(패스트 created_at_kst 열 등).
+ */
+function inferMonthKeyFromValuesInOrder(r) {
+  for (const [key, val] of Object.entries(r)) {
+    if (key === '_month' || key.startsWith('_')) continue;
+    if (val == null || val === '') continue;
+    if (isNonDateColumnForMonthKey(key)) continue;
+    if (isLikelyNonDateColumnKey(key)) continue;
+    const mk = toMonthKey(val);
+    if (mk) return mk;
+  }
+  return null;
+}
+
 /** 첫 열 실패 시에만: 열 이름이 실제 일시인 경우만 스캔 (수강인원·sum_range_time 등은 제외) */
 function inferMonthKeyForRow(r) {
   let k = toMonthKey(guessMonthFromRow(r));
@@ -460,7 +498,7 @@ function inferMonthKeyForRow(r) {
     k = toMonthKey(val);
     if (k) return k;
   }
-  return null;
+  return inferMonthKeyFromValuesInOrder(r);
 }
 
 function guessDeptName(r) {
