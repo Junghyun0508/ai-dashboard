@@ -437,7 +437,8 @@ function guessMonthFromRow(r) {
   if (v != null && v !== '') return v;
   for (const [k, val] of Object.entries(r)) {
     if (val == null || val === '' || k === '_month') continue;
-    if (/(접속년월|년월|학습시작|created_at|일자|datetime|date|timestamp|kst|시작|접속|수강일|완료|갱신)/i.test(k) && !/메일|이름|name|email|id$|course_id|member_id/i.test(k)) return val;
+    // 'date' 단독 매칭은 candidate·updated 등 오탐 — 열 이름을 구체적으로만 허용
+    if (/(접속년월|년월|학습시작|created_at|updated_at|completed_at|session_date|learning_date|view_date|일자|datetime|timestamp|kst|시작|접속|수강일|수강시|수강시작|완료|갱신|created_at_kst|start_time|progress_at)/i.test(k) && !/메일|이름|name|email|id$|course_id|member_id/i.test(k)) return val;
   }
   return null;
 }
@@ -517,10 +518,22 @@ function isHrTargetFlag(flag) {
 // Papa.parse(download)는 GitHub Pages 등 교차 출처에서 CORS로 실패함.
 // 스크립트 태그 로드는 CORS 제한이 없어 동일 HTML이 Pages에서도 동작함.
 // ══════════════════════════════════════════
+/** gviz는 날짜/시간 셀을 { v: { v: 45900, f: "2025/9/22" } } 처럼 중첩해 보내는 경우가 있어, 그대로 두면 parseLearningDate가 실패하고 월 키가 깨짐 */
 function gvizCellValue(cell) {
   if (cell == null) return '';
-  if (cell.v instanceof Date) return cell.v;
-  if (cell.v !== null && cell.v !== undefined && cell.v !== '') return cell.v;
+  let v = cell.v;
+  while (v != null && typeof v === 'object' && !(v instanceof Date)) {
+    if (v.v !== null && v.v !== undefined && v.v !== '') {
+      v = v.v;
+    } else if (v.f != null && v.f !== '') {
+      return typeof v.f === 'string' ? v.f : String(v.f);
+    } else {
+      v = '';
+      break;
+    }
+  }
+  if (v instanceof Date) return v;
+  if (v !== null && v !== undefined && v !== '') return v;
   if (cell.f != null && cell.f !== '') return cell.f;
   return '';
 }
