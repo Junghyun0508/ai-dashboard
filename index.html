@@ -5,1630 +5,808 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 역량강화 교육 이용 현황</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Space+Mono:wght@400;700&display=swap');
-:root {
-  --bg:#e8eef5;--surface:#ffffff;--surface2:#f0f4fa;--border:#d0d8e4;
-  --accent:#2563eb;--accent2:#ea5b2f;--accent3:#0d9e6e;--purple:#7c3aed;
-  --text:#1a1d2e;--muted:#5c6570;
-  --fast:#c62828;--inf:#2e7d32;
-  --header-dark:#252a30;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);padding:20px 24px 32px;min-width:1100px;}
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #21253a;
+    --border: #2a2f45;
+    --fc-pink: #ff6b8a;
+    --fc-pink-soft: rgba(255,107,138,0.15);
+    --il-green: #3ecf8e;
+    --il-green-soft: rgba(62,207,142,0.15);
+    --accent: #5b8ff9;
+    --accent-soft: rgba(91,143,249,0.15);
+    --text: #e8eaf6;
+    --text-muted: #8890b0;
+    --text-dim: #555f82;
+    --yellow: #ffd166;
+    --orange: #ff9a3c;
+    --red: #ff5252;
+    --font-main: 'Noto Sans KR', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
 
-/* ── LOADING ── */
-#loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .5s;}
-.spinner{border-top-color:var(--accent) !important;}
-#loadingScreen.hidden{opacity:0;pointer-events:none;}
-.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px;}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{font-size:14px;color:var(--muted);}
-.loading-sub{font-size:12px;color:var(--border);margin-top:6px;font-family:'Space Mono',monospace;}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── ERROR ── */
-#errorBanner{background:rgba(247,121,79,.1);border:1px solid rgba(247,121,79,.3);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:none;align-items:center;gap:10px;font-size:13px;}
-#errorBanner.show{display:flex;}
-.err-retry{margin-left:auto;padding:5px 14px;border-radius:6px;border:1px solid rgba(247,121,79,.4);background:transparent;color:var(--accent2);font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+  body {
+    font-family: var(--font-main);
+    background: var(--bg);
+    color: var(--text);
+    min-width: 1280px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
 
-/* ── HEADER (엑셀 대시보드 느낌) ── */
-.hero-bar{background:linear-gradient(180deg,#2d3338 0%,#1e2328 100%);color:#fff;padding:16px 22px;border-radius:12px;margin-bottom:14px;box-shadow:0 4px 20px rgba(0,0,0,.15);}
-.hero-bar-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
-.hero-bar h1{font-size:19px;font-weight:900;letter-spacing:-.3px;}
-.hero-bar .hero-meta{font-size:12px;color:rgba(255,255,255,.75);font-family:'Space Mono',monospace;}
-.hero-bar .hero-meta strong{color:#fff;}
-.refresh-btn{padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .2s;}
-.refresh-btn:hover{background:rgba(255,255,255,.15);}
-.spin{animation:spin .8s linear infinite;display:inline-block;}
+  /* ── TOP NAV ── */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+  .topbar-title .robot { font-size: 18px; }
+  .topbar-spacer { flex: 1; }
+  .topbar-update {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+  }
+  .kpi-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .kpi-chip .label { font-size: 10px; color: var(--text-muted); }
+  .kpi-chip .value { font-size: 15px; font-weight: 700; font-family: var(--font-mono); color: var(--accent); }
+  .kpi-chip .unit { font-size: 10px; color: var(--text-dim); }
+  .kpi-chip.green .value { color: var(--il-green); }
+  .kpi-chip.usage .value { color: var(--yellow); }
 
-/* ── KPI 검정 카드 ── */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
-.kpi{background:#1a1a1a;color:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 2px 12px rgba(0,0,0,.18);}
-.kpi-lbl{font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px;font-weight:600;}
-.kpi-val{font-size:26px;font-weight:900;font-family:'Space Mono',monospace;line-height:1.15;color:#fff;}
-.kpi-sub{font-size:10px;color:rgba(255,255,255,.45);margin-top:4px;}
+  /* ── LAYOUT ── */
+  .content { padding: 20px 28px 40px; }
+  .section { margin-bottom: 28px; }
+  .section-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-left: 2px;
+  }
+  .section-header .num {
+    width: 22px; height: 22px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .section-header .date-range {
+    font-size: 11px; font-weight: 400;
+    color: var(--text-dim); font-family: var(--font-mono);
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2px 8px;
+  }
 
-/* ── FILTER (좌측 사이드바용) ── */
-.filter-aside-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
-.corp-chips{display:flex;flex-direction:column;gap:5px;max-height:min(62vh,560px);overflow-y:auto;padding-right:4px;}
-.chip{padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:'Noto Sans KR',sans-serif;text-align:left;width:100%;}
-.chip:hover{border-color:#90a4ae;background:var(--surface2);}
-.chip.active{background:#e3f2fd;border-color:#1976d2;color:#0d47a1;font-weight:700;}
-.filter-actions{display:flex;flex-direction:column;gap:5px;margin-top:10px;}
-.filter-btn{padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
-.filter-btn:hover{border-color:#1976d2;color:#1565c0;}
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .dot-fc { background: var(--fc-pink); }
+  .dot-il { background: var(--il-green); }
 
-/* ── TABS ── */
-.tab-row{display:flex;margin-bottom:14px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:3px;width:fit-content;}
-.tab-btn{padding:6px 20px;border-radius:7px;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .2s;}
-.tab-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.3);}
-.tab-btn.tab-fast.active{color:var(--fast);}.tab-btn.tab-inf.active{color:var(--inf);}.tab-btn.tab-both.active{color:var(--purple);}
+  /* ── SECTION 1 grid ── */
+  .sec1-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 16px;
+  }
+  .chart-wrap {
+    position: relative;
+    height: 200px;
+  }
 
-/* ── LAYOUT ── */
-.row{display:grid;gap:12px;margin-bottom:12px;}
-.row.c2{grid-template-columns:1fr 1fr;}
+  /* ── TABLE ── */
+  .stat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .stat-table th {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .stat-table th:first-child { text-align: left; }
+  .stat-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(42,47,69,0.6);
+    text-align: right;
+    color: var(--text);
+  }
+  .stat-table td:first-child { text-align: left; font-weight: 500; color: var(--text-muted); }
+  .stat-table tr:last-child td {
+    font-weight: 700;
+    color: var(--text);
+    border-top: 1px solid var(--border);
+    border-bottom: none;
+  }
+  .stat-table tr:hover:not(:last-child) td { background: var(--surface2); }
 
-/* ── PANEL ── */
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px;}
-.panel-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.dot.b{background:var(--accent);}.dot.g{background:var(--accent3);}.dot.p{background:var(--purple);}
-.period-badge{display:inline-block;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.25);color:var(--accent);font-size:10px;font-family:'Space Mono',monospace;padding:2px 8px;border-radius:99px;}
-.chart-legend{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap;}
-.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
-.leg-item span{width:12px;height:3px;border-radius:2px;display:inline-block;}
-.month-x{display:flex;justify-content:space-between;font-size:10px;font-family:'Space Mono',monospace;color:var(--muted);margin-top:4px;padding:0 2px;}
-.monthly-charts-grid{display:flex;flex-direction:column;gap:18px;margin-top:10px;}
-.monthly-charts-grid.side-by-side{flex-direction:row;flex-wrap:wrap;}
-.monthly-charts-grid.side-by-side > div{flex:1;min-width:280px;}
-.platform-tag{font-size:11px;font-weight:800;letter-spacing:.02em;margin-bottom:8px;padding:4px 10px;border-radius:6px;width:fit-content;}
-.platform-tag.fc{background:rgba(211,47,47,.12);color:var(--fast);border:1px solid rgba(211,47,47,.25);}
-.platform-tag.inf{background:rgba(56,142,60,.12);color:var(--inf);border:1px solid rgba(56,142,60,.25);}
-.chart-box{position:relative;min-height:260px;height:260px;background:#fafbfd;border-radius:8px;border:1px solid var(--border);}
-.section-num{color:var(--muted);font-weight:800;margin-right:4px;}
+  .pct-bar-wrap { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+  .pct-bar {
+    height: 4px; border-radius: 2px; flex-shrink: 0;
+    background: var(--border);
+    position: relative; overflow: hidden;
+    width: 50px;
+  }
+  .pct-bar-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 2px; }
+  .pct-text { font-size: 11px; font-family: var(--font-mono); min-width: 36px; }
+  .pct-fc .pct-bar-fill { background: var(--fc-pink); }
+  .pct-il .pct-bar-fill { background: var(--il-green); }
 
-/* ── 엑셀식 3열 ── */
-.excel-main{display:grid;grid-template-columns:200px minmax(0,1fr) minmax(300px,360px);gap:14px;align-items:start;margin-bottom:16px;}
-@media(max-width:1200px){.excel-main{grid-template-columns:1fr;}}
-.excel-aside{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 10px;position:sticky;top:12px;}
-.excel-center{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
-.excel-center .section-head{font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px;}
-.excel-center .section-period{font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px;}
-.excel-right{display:flex;flex-direction:column;gap:12px;}
-.tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06);}
-.tbl-card-head.fast{background:var(--fast);color:#fff;font-size:12px;font-weight:800;padding:8px 10px;}
-.tbl-card-head.inf{background:var(--inf);color:#fff;font-size:12px;font-weight:800;padding:8px 10px;}
-.tbl-card .tbl-wrap{max-height:280px;overflow-y:auto;}
-.tbl-card table{font-size:11px;}
-.tbl-card thead th{background:rgba(0,0,0,.04);padding:6px 8px;}
-.tbl-card tbody td{padding:5px 8px;}
-.excel-aside-note{font-size:10px;color:var(--muted);line-height:1.5;padding:8px;background:var(--surface2);border-radius:8px;border:1px dashed var(--border);}
-.rest-below{margin-top:18px;display:flex;flex-direction:column;gap:12px;}
+  /* ── RIGHT PANEL ── */
+  .sec1-right { display: flex; flex-direction: column; gap: 14px; }
 
-/* ── TABLE ── */
-.tbl-wrap{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;font-size:12px;}
-thead th{padding:7px 9px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border);text-transform:uppercase;white-space:nowrap;}
-tbody td{padding:8px 9px;border-bottom:1px solid var(--border);}
-tbody tr:hover td{background:var(--surface2);}
-tbody tr:last-child td{border-bottom:none;}
-.total-row td{color:var(--accent);font-weight:700;background:rgba(37,99,235,.04)!important;}
-.num{font-family:'Space Mono',monospace;}
-.r-high{color:var(--accent3);}.r-mid{color:var(--accent);}.r-low{color:var(--muted);}
-.rank-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;}
-.rk1{background:rgba(234,179,8,.15);color:#a16207;}.rk2{background:rgba(100,116,139,.12);color:#475569;}
-.rk3{background:rgba(180,83,9,.12);color:#92400e;}.rkn{background:var(--surface2);color:var(--muted);}
+  .weekly-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .weekly-box .wk-title { font-size: 10px; color: var(--text-dim); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 10px; }
+  .weekly-stat { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+  .weekly-stat .label { font-size: 11px; color: var(--text-muted); }
+  .weekly-stat .big { font-size: 22px; font-weight: 700; font-family: var(--font-mono); color: var(--text); }
+  .weekly-stat .badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; }
+  .badge-up { background: rgba(62,207,142,0.15); color: var(--il-green); }
+  .badge-eq { background: rgba(91,143,249,0.12); color: var(--accent); }
 
-/* ── PROGRESS ── */
-.prog-row{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
-.prog-name{font-size:11px;color:var(--text);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.prog-track{flex:1;height:5px;background:var(--surface2);border-radius:99px;overflow:hidden;min-width:30px;}
-.prog-fill{height:100%;border-radius:99px;transition:width .7s ease;}
-.prog-val{font-size:11px;font-family:'Space Mono',monospace;color:var(--muted);flex-shrink:0;}
+  .platform-stack {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 0 2px;
+  }
+  .platform-row { display: flex; align-items: center; gap: 10px; }
+  .platform-name { font-size: 11px; font-weight: 600; width: 70px; flex-shrink: 0; }
+  .platform-bar-bg { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .platform-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+  .platform-val { font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); width: 38px; text-align: right; }
 
-hr.div{border:none;border-top:1px solid var(--border);margin:12px 0;}
-.footnote{font-size:11px;color:var(--muted);margin-top:10px;border-top:1px solid var(--border);padding-top:9px;line-height:1.7;}
-.empty{text-align:center;padding:28px;color:var(--muted);font-size:12px;}
-#dataWarning{display:none;background:#fff8e6;border:1px solid #e8d4a8;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.65;color:#4a3d12;}
-#dataWarning code{font-size:11px;background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px;}
+  /* ── NOTICE BOX ── */
+  .notice-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 11px;
+  }
+  .notice-box .n-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); margin-bottom: 10px; }
+  .notice-item { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
+  .notice-item:last-child { margin-bottom: 0; }
+  .n-date { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); flex-shrink: 0; min-width: 90px; }
+  .n-text { color: var(--text-muted); line-height: 1.4; }
+
+  /* ── SECTION 2 ── */
+  .sec2-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .bar-chart-wrap { position: relative; height: 260px; }
+
+  /* ── SECTION 3 ── */
+  .sec3-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .doughnut-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .doughnut-wrap {
+    position: relative;
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .doughnut-wrap canvas { max-height: 130px; }
+  .doughnut-label { font-size: 10px; color: var(--text-dim); text-align: center; margin-top: 4px; }
+
+  .rank-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .rank-table th {
+    font-size: 10px; font-weight: 600;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.4px;
+    padding: 6px 8px; border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    text-align: left;
+  }
+  .rank-table th:not(:first-child) { text-align: right; }
+  .rank-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(42,47,69,0.5);
+    vertical-align: top;
+    color: var(--text-muted);
+  }
+  .rank-table td:not(:first-child) { text-align: right; font-family: var(--font-mono); }
+  .rank-table tr:hover td { background: var(--surface2); }
+  .rank-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+    background: var(--surface2);
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .rank-num.top1 { background: var(--yellow); color: #000; }
+  .rank-num.top2 { background: #c0c0c0; color: #000; }
+  .rank-num.top3 { background: #cd7f32; color: #fff; }
+  .course-name { color: var(--text); line-height: 1.35; margin-top: 1px; }
+  .course-meta { font-size: 10px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
+
+  /* ── TAB STYLE for platform toggle ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+  .tab {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px; font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    transition: all .2s;
+  }
+  .tab.fc-active { background: var(--fc-pink-soft); border-color: var(--fc-pink); color: var(--fc-pink); }
+  .tab.il-active { background: var(--il-green-soft); border-color: var(--il-green); color: var(--il-green); }
+
+  /* ── FOOTER ── */
+  .footer { padding: 12px 28px; border-top: 1px solid var(--border); display: flex; gap: 8px; font-size: 10px; color: var(--text-dim); }
+  .footer span { padding: 2px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
 </head>
 <body>
 
-<!-- LOADING -->
-<div id="loadingScreen">
-  <div class="spinner"></div>
-  <div class="loading-text">구글 시트에서 데이터를 불러오는 중...</div>
-  <div class="loading-sub" id="loadingSub">잠시만 기다려주세요</div>
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-title">
+    <span class="robot">🤖</span>
+    AI 역량강화 교육 이용 현황
+  </div>
+  <div class="topbar-update">update : 2026-03-20</div>
+  <div class="topbar-spacer"></div>
+  <div class="kpi-chip">
+    <span class="label">대상총원*(A)</span>
+    <span class="value">2,787</span>
+    <span class="unit">명</span>
+  </div>
+  <div class="kpi-chip green">
+    <span class="label">수강인원**(B)</span>
+    <span class="value">1,017</span>
+    <span class="unit">명</span>
+  </div>
+  <div class="kpi-chip usage">
+    <span class="label">사용률(B/A)</span>
+    <span class="value">36.5%</span>
+  </div>
 </div>
 
-<!-- ERROR -->
-<div id="errorBanner">
-  <span>⚠️</span>
-  <span id="errorMsg">데이터를 불러오지 못했습니다.</span>
-  <button class="err-retry" onclick="loadData()">다시 시도</button>
-</div>
+<div class="content">
 
-<!-- DASHBOARD -->
-<div id="dashboard" style="opacity:0;transition:opacity .4s;">
+  <!-- ① 법인&기간별 이용 현황 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="num">①</span>
+      법인 &amp; 기간별 이용 현황
+      <span class="date-range">2025-09-22(런칭) → 2026-03-20(현재)</span>
+    </div>
 
-  <div class="hero-bar">
-    <div class="hero-bar-inner">
-      <div>
-        <h1>🤖 AI 역량강화 교육 이용 현황</h1>
-        <div class="hero-meta">update : <strong id="updateDate">—</strong></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 320px; gap:16px;">
+
+      <!-- Fast campus chart -->
+      <div class="card">
+        <div class="card-title"><span class="dot dot-fc"></span>Fast Campus — 누적 학습시간 & 수강인원</div>
+        <div class="chart-wrap">
+          <canvas id="chartFC"></canvas>
+        </div>
       </div>
-      <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
-        <span id="refreshIcon">↻</span> 데이터 새로고침
-      </button>
+
+      <!-- inflearn chart -->
+      <div class="card">
+        <div class="card-title"><span class="dot dot-il"></span>Inflearn — 누적 학습시간 & 활성유저</div>
+        <div class="chart-wrap">
+          <canvas id="chartIL"></canvas>
+        </div>
+      </div>
+
+      <!-- Right panel -->
+      <div style="display:flex; flex-direction:column; gap:12px;">
+
+        <!-- FC 법인별 -->
+        <div class="card" style="flex:1; padding:14px 16px;">
+          <div class="card-title" style="margin-bottom:10px;"><span class="dot dot-fc"></span>Fast Campus 법인별</div>
+          <table class="stat-table">
+            <thead><tr>
+              <th>소속</th><th>총원</th><th>수강</th><th>사용률</th>
+            </tr></thead>
+            <tbody id="fcTable"></tbody>
+          </table>
+        </div>
+
+        <!-- IL 법인별 -->
+        <div class="card" style="flex:1; padding:14px 16px;">
+          <div class="card-title" style="margin-bottom:10px;"><span class="dot dot-il"></span>Inflearn 법인별</div>
+          <table class="stat-table">
+            <thead><tr>
+              <th>소속</th><th>총원</th><th>수강</th><th>사용률</th>
+            </tr></thead>
+            <tbody id="ilTable"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Weekly stats + platform bar + notice -->
+    <div style="display:grid; grid-template-columns:200px 240px 1fr; gap:12px; margin-top:12px;">
+      <div class="weekly-box">
+        <div class="wk-title">📊 주간 현황</div>
+        <div style="margin-bottom:10px;">
+          <div class="weekly-stat">
+            <span class="label">패스트캠퍼스</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:6px;">
+            <span class="big" style="color:var(--fc-pink);">831</span><span style="font-size:11px;color:var(--text-dim);">명</span>
+            <span class="badge badge-up">+0.4%</span>
+          </div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <div class="weekly-stat"><span class="label">인프런</span></div>
+          <div style="display:flex; align-items:baseline; gap:6px;">
+            <span class="big" style="color:var(--il-green);">418</span><span style="font-size:11px;color:var(--text-dim);">명</span>
+            <span class="badge badge-up">+0.3%</span>
+          </div>
+        </div>
+        <div style="font-size:9px; color:var(--text-dim); margin-top:4px;">2주 전 대비 기준</div>
+      </div>
+
+      <div class="weekly-box">
+        <div class="wk-title">📱 플랫폼별 사용률</div>
+        <div class="platform-stack">
+          <div class="platform-row">
+            <span class="platform-name" style="color:var(--fc-pink);">패스트캠퍼스</span>
+            <div class="platform-bar-bg"><div class="platform-bar-fill" style="background:var(--fc-pink); width:87%"></div></div>
+            <span class="platform-val">87%</span>
+          </div>
+          <div style="font-size:9px; color:var(--text-dim); margin-left:80px; margin-bottom:4px;">2주 前 967명 → 현재 831명</div>
+          <div class="platform-row">
+            <span class="platform-name" style="color:var(--il-green);">인프런</span>
+            <div class="platform-bar-bg"><div class="platform-bar-fill" style="background:var(--il-green); width:43%"></div></div>
+            <span class="platform-val">43%</span>
+          </div>
+          <div style="font-size:9px; color:var(--text-dim); margin-left:80px; margin-bottom:4px;">2주 前 409명 → 현재 418명</div>
+          <div class="platform-row">
+            <span class="platform-name" style="color:var(--accent);">총 사용률</span>
+            <div class="platform-bar-bg"><div class="platform-bar-fill" style="background:var(--accent); width:36.5%"></div></div>
+            <span class="platform-val">36.5%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="notice-box">
+        <div class="n-title">📢 배고</div>
+        <div class="notice-item">
+          <span class="n-date">25/09/22(월)</span><span class="n-text">AI 역량교육 서비스 오픈</span>
+        </div>
+        <div class="notice-item">
+          <span class="n-date">26/03/23(일)</span><span class="n-text">4/1 인도 법인 수료 기준 설정 (61 1년내 30개 이상)</span>
+        </div>
+        <div class="notice-item">
+          <span class="n-date">26/11/21(목)</span><span class="n-text">Airtel 인도법인 프로그램 추가 (시뮬)</span>
+        </div>
+        <div class="notice-item">
+          <span class="n-date">26/03/14(월)~18(수)</span><span class="n-text">설 연휴</span>
+        </div>
+        <div class="notice-item">
+          <span class="n-date">26/04/06(주)</span><span class="n-text">다음 업데이트 날짜</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- KPI -->
-  <div class="kpi-row">
-    <div class="kpi"><div class="kpi-lbl">대상 인원 (A)</div><div class="kpi-val" id="kpiTotal">—</div><div class="kpi-sub" id="kpiTotalSub">—</div></div>
-    <div class="kpi"><div class="kpi-lbl">수강 인원 (B)</div><div class="kpi-val" id="kpiEnrolled">—</div><div class="kpi-sub">1회 이상 로그 기준</div></div>
-    <div class="kpi"><div class="kpi-lbl">사용률 (B/A)</div><div class="kpi-val" id="kpiRate">—</div><div class="kpi-sub" id="kpiRateSub">선택 법인 기준</div></div>
-    <div class="kpi"><div class="kpi-lbl">총 학습 시간</div><div class="kpi-val" id="kpiHours">—</div><div class="kpi-sub" id="kpiHoursSub">—</div></div>
-  </div>
+  <!-- ② KRAFTON 본부별 이용현황 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="num" style="background:var(--il-green);">②</span>
+      KRAFTON, Inc. 본부별 이용현황
+      <span class="date-range">2025-09-22(런칭) → 2026-03-20(현재)</span>
+    </div>
 
-  <div class="tab-row">
-    <button class="tab-btn tab-both active" onclick="setTab('both')">전체</button>
-    <button class="tab-btn tab-fast" onclick="setTab('fast')">패스트캠퍼스</button>
-    <button class="tab-btn tab-inf" onclick="setTab('inf')">인프런</button>
-  </div>
-
-  <div id="dataWarning"></div>
-  <div id="sourceNote" class="footnote" style="display:none;margin-bottom:14px;padding:12px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);line-height:1.65;"></div>
-
-  <!-- ① 엑셀식: 좌 필터 | 중 차트 | 우 표 -->
-  <div class="excel-main">
-    <aside class="excel-aside">
-      <div class="filter-aside-title">법인구분</div>
-      <div class="corp-chips" id="corpChips"></div>
-      <div class="filter-actions">
-        <button class="filter-btn" onclick="selectAll()">전체 선택</button>
-        <button class="filter-btn" onclick="clearAll()">전체 해제</button>
-      </div>
-    </aside>
-    <section class="excel-center">
-      <div class="section-head" id="monthTitle">① 법인·기간별 이용 현황</div>
-      <div class="section-period" id="periodRangeLabel">기간: —</div>
-      <div class="monthly-charts-grid" id="monthlyChartsGrid">
-        <div id="fcMonthlyWrap">
-          <div class="platform-tag fc">패스트캠퍼스 · 합계: 학습시간(H) / 수강인원(명)</div>
-          <div class="chart-box"><canvas id="monthlyChartFast"></canvas></div>
-        </div>
-        <div id="infMonthlyWrap">
-          <div class="platform-tag inf">인프런 · 합계: 학습시간(H) / 수강인원(명)</div>
-          <div class="chart-box"><canvas id="monthlyChartInf"></canvas></div>
+    <div class="sec2-grid">
+      <div class="card">
+        <div class="card-title"><span class="dot dot-fc"></span>Fast Campus — 본부별 누적 학습시간 &amp; 활성유저</div>
+        <div class="bar-chart-wrap">
+          <canvas id="chartFCDept"></canvas>
         </div>
       </div>
-    </section>
-    <aside class="excel-right">
-      <div class="tbl-card" id="corpTableFastWrap">
-        <div class="tbl-card-head fast">패스트캠퍼스 — 법인별</div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>소속</th><th style="text-align:right">모수(A)</th><th style="text-align:right">수강(B)</th><th style="text-align:right">B/A</th></tr></thead>
-            <tbody id="corpTableFast"></tbody>
+      <div class="card">
+        <div class="card-title"><span class="dot dot-il"></span>Inflearn — 본부별 누적 학습시간 &amp; 활성유저</div>
+        <div class="bar-chart-wrap">
+          <canvas id="chartILDept"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 기타 참고지표 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="num" style="background:var(--orange);">③</span>
+      기타 참고지표
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+      <!-- Fast campus 요일별 + 인기강좌 -->
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="card">
+          <div class="card-title"><span class="dot dot-fc"></span>Fast Campus — 요일별 학습시간 비중</div>
+          <div style="height:160px; position:relative;">
+            <canvas id="chartFCWeekday"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot dot-fc"></span>Fast Campus 인기 강좌 순위</div>
+          <table class="rank-table">
+            <thead><tr>
+              <th>순위</th><th>코스명</th><th style="text-align:right">수강(명)</th><th style="text-align:right">학습시간</th>
+            </tr></thead>
+            <tbody id="fcRank"></tbody>
           </table>
         </div>
       </div>
-      <div class="tbl-card" id="corpTableInfWrap">
-        <div class="tbl-card-head inf">인프런 — 법인별</div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>소속</th><th style="text-align:right">모수(A)</th><th style="text-align:right">수강(B)</th><th style="text-align:right">B/A</th></tr></thead>
-            <tbody id="corpTableInf"></tbody>
+
+      <!-- Inflearn 요일별 + 인기강좌 -->
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="card">
+          <div class="card-title"><span class="dot dot-il"></span>Inflearn — 요일별 학습시간 비중</div>
+          <div style="height:160px; position:relative;">
+            <canvas id="chartILWeekday"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot dot-il"></span>Inflearn 인기 강좌 순위</div>
+          <table class="rank-table">
+            <thead><tr>
+              <th>순위</th><th>코스명</th><th style="text-align:right">수강(명)</th><th style="text-align:right">학습시간</th>
+            </tr></thead>
+            <tbody id="ilRank"></tbody>
           </table>
         </div>
       </div>
-      <div class="excel-aside-note" id="excelAsideNote">※ 표는 HR(모수) + 플랫폼 로그(수강) 집계입니다. 상단 KPI는 시트 <code>KPI_HTML</code> 연동 시 엑셀과 동일 표시.</div>
-    </aside>
-  </div>
 
-  <div class="rest-below">
-
-  <!-- ② 본부별 이중축 선그래프 -->
-  <div class="row c2">
-    <div class="panel">
-      <div class="panel-title" id="deptTitle1"><span class="dot b"></span> <span class="section-num">②</span> KRAFTON HQ 본부별 이용 현황</div>
-      <div class="chart-box" style="height:280px;"><canvas id="deptChartFast"></canvas></div>
-    </div>
-    <div class="panel" id="deptPanel2">
-      <div class="panel-title"><span class="dot g"></span> <span class="section-num">②</span> KRAFTON HQ 본부별 이용 현황</div>
-      <div class="chart-box" style="height:280px;"><canvas id="deptChartInf"></canvas></div>
     </div>
   </div>
 
-  <!-- ③ 요일별 막대 -->
-  <div class="row c2">
-    <div class="panel">
-      <div class="panel-title" id="dowTitle1"><span class="dot b"></span> <span class="section-num">③</span> 요일별 학습시간 비중</div>
-      <div class="chart-box" style="height:240px;"><canvas id="dowChartFast"></canvas></div>
-    </div>
-    <div class="panel" id="dowSection2">
-      <div class="panel-title"><span class="dot g"></span> <span class="section-num">③</span> 요일별 학습시간 비중</div>
-      <div class="chart-box" style="height:240px;"><canvas id="dowChartInf"></canvas></div>
-    </div>
-  </div>
+</div>
 
-  <!-- 인기 강좌 -->
-  <div class="row c2">
-    <div class="panel" id="coursePanel1">
-      <div class="panel-title" id="courseTitle1"><span class="dot b"></span> 인기 강좌 순위 <span class="period-badge">TOP 5</span></div>
-      <table>
-        <thead><tr><th>순위</th><th>코스명</th><th style="text-align:right">학습인원</th><th style="text-align:right">학습시간</th></tr></thead>
-        <tbody id="courseTable1"></tbody>
-      </table>
-    </div>
-    <div class="panel" id="coursePanel2">
-      <div class="panel-title"><span class="dot g"></span> 인기 강좌 순위 <span class="period-badge">TOP 5</span></div>
-      <table>
-        <thead><tr><th>순위</th><th>코스명</th><th style="text-align:right">학습인원</th><th style="text-align:right">학습시간</th></tr></thead>
-        <tbody id="courseTable2"></tbody>
-      </table>
-    </div>
-  </div>
-
-  </div><!-- /rest-below -->
-
-</div><!-- /dashboard -->
+<!-- FOOTER -->
+<div class="footer">
+  <span>* 국내 재직중인 KRAFTON HQ, KR Studios, Beyond the Game 구성원</span>
+  <span>** 본 제도를 1회 이상 사용한 인원</span>
+</div>
 
 <script>
-// ══════════════════════════════════════════
-// ① 구글 시트 ID — 여기만 바꾸면 됩니다
-// ══════════════════════════════════════════
-// 구글 스프레드시트 ID (URL의 /d/ 이후 /edit 앞 문자열)
-const SHEET_ID = '1FPiXIDJHPjd4-96MKYXoUe-9Bvu70mD37noA55dXR74';
-
-// 원본 로그 시트 탭 이름 — 구글 시트 하단 탭과 한 글자라도 다르면 데이터를 못 읽습니다.
-const SHEET_TAB_FAST = '02_패스트캠퍼스';
-const SHEET_TAB_INF = '06_인프런';
-const SHEET_TAB_HR = '10_인사정보';
-
-// 피벗(요일) 시트 — Grand Total 참고용(없어도 대시보드는 동작)
-const SHEET_PIVOT_FAST_DOW = '03_F_피벗(요일)';
-const SHEET_PIVOT_INF_DOW = '07_I_피벗(요일)';
-
-// 엑셀 대시보드와 동일한 상단 KPI를 쓰려면 둘 중 하나를 구글 시트에 둡니다.
-// ① 권장: 시트 이름 KPI_HTML — A열 항목 / B열 값 (아래 주석 템플릿)
-// ② 선택: 01_대시보드 — 표 형태가 아니면 자동 추출이 실패할 수 있음 → ① 사용
-const SHEET_TAB_KPI_IMPORT = 'KPI_HTML';
-const SHEET_TAB_DASHBOARD = '01_대시보드';
-/*
-  [구글 시트] 시트 "KPI_HTML" 추가 시 상단 KPI = 엑셀 대시보드와 동일하게 맞출 수 있음.
-  1행: 항목 | 값
-  2행~: 대상총원(A) | 2787  /  수강인원(B) | 1017  /  총학습시간(H) | 4873  (엑셀에서 값만 붙여넣기)
-  (선택) 수강률 | 36.5  — 없으면 B/A로 계산
-*/
-
-// ══════════════════════════════════════════
-// 전역 상태
-// ══════════════════════════════════════════
-let DATA = null;
-let selectedCorps = [];
-let currentTab = 'both';
-let chartMonthlyFast = null, chartMonthlyInf = null;
-let chartDeptFast = null, chartDeptInf = null;
-let chartDowFast = null, chartDowInf = null;
-
-function destroyChart(ch) {
-  if (ch && typeof ch.destroy === 'function') ch.destroy();
-}
-
-function setChartEmpty(canvasId, empty, text) {
-  const c = document.getElementById(canvasId);
-  if (!c) return;
-  const box = c.closest('.chart-box');
-  if (!box) return;
-  let msg = box.querySelector('.chart-empty-msg');
-  if (empty) {
-    c.style.display = 'none';
-    if (!msg) {
-      msg = document.createElement('div');
-      msg.className = 'empty chart-empty-msg';
-      box.appendChild(msg);
-    }
-    msg.style.cssText = 'display:flex;align-items:center;justify-content:center;min-height:180px;width:100%;padding:12px;text-align:center;line-height:1.5;';
-    msg.textContent = text || '데이터 없음';
-  } else {
-    c.style.display = 'block';
-    if (msg) msg.style.display = 'none';
-  }
-}
-
-const VALID_CORPS = ['5minlab','Dreamotion','Flyway Games','JOFSOFT','KRAFTON HQ','Loonshot Games',
-  'OVERDARE','Olivetree Games','Omni Craftlabs','PUBG STUDIOS','ReLU Games',
-  'Rising Wings','bluehole studio','inZOI studio','기타(해외파견)'];
-
-// 시트/엑셀의 법인구분이 끝공백·NBSP·zero-width·연속공백 등으로 살짝 다르면 includes()에서만 탈락함 (전사 총원은 맞는데 법인별만 1명 적게 보임)
-function canonicalCorpName(raw) {
-  if (raw == null || raw === '') return null;
-  const s = String(raw)
-    .replace(/[\u200b-\u200d\ufeff]/g, '')
-    .replace(/\u00a0/g, ' ')
-    .trim()
-    .replace(/\s+/g, ' ');
-  if (VALID_CORPS.includes(s)) return s;
-  const hit = VALID_CORPS.find(v => v.toLowerCase() === s.toLowerCase());
-  return hit || null;
-}
-
-function normalizeId(email) {
-  if (!email) return null;
-  return String(email).split('@')[0].toLowerCase().trim();
-}
-
-const DOW_ORDER = ['월','화','수','목','금','토','일'];
-
-// gviz 날짜: Date 객체 / 시리얼 숫자 / "2024. 9. 22" 같은 표시 문자열만 오는 경우 등 → new Date(v)만 쓰면 Invalid가 나와 월별·UPDATE가 비는 경우가 많음
-function parseLearningDate(v) {
-  if (v == null || v === '') return null;
-  if (typeof v === 'object' && v !== null && !(v instanceof Date) && 'v' in v && !('year' in v)) {
-    if (v.v !== null && v.v !== undefined && v.v !== '') return parseLearningDate(v.v);
-    if (v.f != null && v.f !== '') return parseLearningDate(v.f);
-  }
-  if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
-  if (typeof v === 'object' && v !== null && 'year' in v && 'month' in v && 'day' in v) {
-    const y = v.year;
-    const d = v.day;
-    let mon = v.month;
-    if (mon >= 0 && mon <= 11) return new Date(y, mon, d);
-    if (mon >= 1 && mon <= 12) return new Date(y, mon - 1, d);
-    return null;
-  }
-  if (typeof v === 'number' && isFinite(v)) {
-    const n = v;
-    // 엑셀/시트 일련번호(대략 1990~2040년)
-    if (n > 20000 && n < 80000) {
-      const utc = Date.UTC(1899, 11, 30) + Math.floor(n) * 86400000;
-      const d = new Date(utc);
-      if (!isNaN(d.getTime())) return d;
-    }
-    // 밀리초·초 단위 타임스탬프 (수강인원·학습시간(초) 등 작은 숫은 new Date(n) → 1970년으로 잘못 됨)
-    if (n >= 1e12) {
-      const d = new Date(n);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    if (n >= 1e9 && n < 1e12) {
-      const d = new Date(n * 1000);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  }
-  const s = String(v).trim().replace(/\u00a0/g, ' ');
-  if (/^\d+(\.\d+)?$/.test(s)) {
-    const num = parseFloat(s);
-    if (num > 20000 && num < 80000) {
-      const utc = Date.UTC(1899, 11, 30) + Math.floor(num) * 86400000;
-      const d = new Date(utc);
-      if (!isNaN(d.getTime())) return d;
-    }
-    if (num >= 1e12) {
-      const d = new Date(num);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    if (num >= 1e9 && num < 1e12) {
-      const d = new Date(num * 1000);
-      return isNaN(d.getTime()) ? null : d;
-    }
-  }
-  let m = s.match(/^Date\((\d+),(\d+),(\d+)\)$/);
-  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
-  m = s.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?/);
-  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, m[3] ? parseInt(m[3], 10) : 1);
-  m = s.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
-  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
-  m = s.match(/^(\d{4})[\/](\d{1,2})[\/](\d{1,2})/);
-  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
-  m = s.match(/^(\d{4})(\d{2})(\d{2})$/);
-  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
-  m = s.match(/^(\d{4})(\d{2})$/);
-  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, 1);
-  m = s.match(/^(\d{4})[.\/](\d{1,2})$/);
-  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, 1);
-  m = s.match(/(\d{4})\s*년\s*(\d{1,2})\s*월(?:\s*(\d{1,2})\s*일)?/);
-  if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, m[3] ? parseInt(m[3], 10) : 1);
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
-}
-
-function toMonthKey(v) {
-  const d = parseLearningDate(v);
-  if (!d) return null;
-  const y = d.getFullYear();
-  // 잘못된 열(수강인원·sum_time 등)이 숫자로 파싱돼 1970년으로 묶이는 것 방지
-  if (y < 1985 || y > 2050) return null;
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function normalizeDowLabel(raw) {
-  if (raw == null || raw === '') return null;
-  const s = String(raw).trim().replace(/\u00a0/g, '').replace(/\s+/g, '');
-  if (DOW_ORDER.includes(s)) return s;
-  const full = { 월요일: '월', 화요일: '화', 수요일: '수', 목요일: '목', 금요일: '금', 토요일: '토', 일요일: '일' };
-  if (full[s]) return full[s];
-  const lower = s.toLowerCase();
-  const en = { monday: '월', tuesday: '화', wednesday: '수', thursday: '목', friday: '금', saturday: '토', sunday: '일', mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
-  if (en[lower]) return en[lower];
-  if (/^\d+$/.test(s)) {
-    const n = parseInt(s, 10);
-    const iso = { 1: '월', 2: '화', 3: '수', 4: '목', 5: '금', 6: '토', 7: '일' };
-    if (iso[n]) return iso[n];
-    const byJs = ['일', '월', '화', '수', '목', '금', '토'];
-    if (n >= 0 && n <= 6) return byJs[n];
-  }
-  return null;
-}
-
-function normalizeHeaderKey(k) {
-  return String(k || '').replace(/\u00a0/g, ' ').trim().replace(/\s+/g, ' ');
-}
-
-// 시트 가져오기/엑셀 내보내기마다 열 이름이 조금씩 달라질 수 있음 — 직접 키 + 패턴으로 보조
-function getField(r, ...keys) {
-  for (const k of keys) {
-    if (k in r && r[k] != null && r[k] !== '') return r[k];
-  }
-  const cand = keys.map(k => normalizeHeaderKey(k).toLowerCase()).filter(Boolean);
-  for (const rk of Object.keys(r)) {
-    if (r[rk] == null || r[rk] === '') continue;
-    if (normalizeHeaderKey(rk).toLowerCase() === '') continue;
-    if (cand.includes(normalizeHeaderKey(rk).toLowerCase())) return r[rk];
-  }
-  return null;
-}
-
-function guessMonthFromRow(r) {
-  // xlsm V1.2·피벗: 월 축은 접속년월(파생) 기준. 비어 있으면 패스트 created_at_kst·인프런 학습시작 일자 등으로 보조
-  const v = getField(r, '접속년월', '접속 년월', '년월', '학습시작 일자', '학습시작일자', '접속일자', 'created_at_kst', '학습시작일', 'start_date', '접속일시',
-    'created_at', 'updated_at', 'completed_at', 'session_date', 'learning_date', 'view_date', '수강일', '수강일시', '수강시작일', 'progress_at', 'start_time_kst');
-  if (v != null && v !== '') return v;
-  for (const [k, val] of Object.entries(r)) {
-    if (val == null || val === '' || k === '_month') continue;
-    // 'date' 단독 매칭은 candidate·updated 등 오탐 — 열 이름을 구체적으로만 허용
-    if (/(접속년월|년월|학습시작|created_at|updated_at|completed_at|session_date|learning_date|view_date|일자|datetime|timestamp|kst|시작|접속|수강일|수강시|수강시작|완료|갱신|created_at_kst|start_time|progress_at)/i.test(k) && !/메일|이름|name|email|id$|course_id|member_id/i.test(k)) return val;
-  }
-  return null;
-}
-
-/** 월 추론 폴백에서 제외 — 열 이름에 date/time이 들어가도 숫자는 인원·시간·건수인 경우가 많음 */
-function isNonDateColumnForMonthKey(key) {
-  return /수강인원|Course\s*수강|^수강\s*\(|인원\(명\)|활성여부|활성|사번|메일주소|member_email|course_content_id|course_id|product_id|유닛|순서|개수|봤어요|sum_(range|interval)|interval_time|range_time|학습시간\(H\)|^학습시간$/i.test(key);
-}
-
-/** col0·col13 등 이름 없는 열은 스캔 대상, 텍스트 ID·코스명 열은 건너뜀 */
-function isLikelyNonDateColumnKey(key) {
-  if (/^col\d+$/i.test(key)) return false;
-  return /member_id|member_email|member_name|product_id|product_name|course_id|course_name|managedCat|exposedCat|course_content|메일주소|이름|강의|코스|유닛|법인|본부|사번/i.test(key);
-}
-
-/**
- * gviz가 헤더를 비우면 키가 col0·col13처럼만 오고, 열 이름 기반 추론이 전부 실패할 수 있음.
- * 열 순서(객체 삽입 순서)대로 보며, 날짜로만 파싱되는 첫 값을 월 키로 씀(패스트 created_at_kst 열 등).
- */
-function inferMonthKeyFromValuesInOrder(r) {
-  for (const [key, val] of Object.entries(r)) {
-    if (key === '_month' || key.startsWith('_')) continue;
-    if (val == null || val === '') continue;
-    if (isNonDateColumnForMonthKey(key)) continue;
-    if (isLikelyNonDateColumnKey(key)) continue;
-    const mk = toMonthKey(val);
-    if (mk) return mk;
-  }
-  return null;
-}
-
-/** 첫 열 실패 시에만: 열 이름이 실제 일시인 경우만 스캔 (수강인원·sum_range_time 등은 제외) */
-function inferMonthKeyForRow(r) {
-  let k = toMonthKey(guessMonthFromRow(r));
-  if (k) return k;
-  for (const [key, val] of Object.entries(r)) {
-    if (key === '_month' || key.startsWith('_')) continue;
-    if (val == null || val === '') continue;
-    if (isNonDateColumnForMonthKey(key)) continue;
-    if (!/(접속년월|년월|학습시작|일자|datetime|created_at|updated_at|completed_at|session_date|learning_date|view_date|접속일|접속일시|start_date|start_time|progress_at|kst|수강일|수강시|수강시작|timestamp|at_kst|_at$|date$|time_kst)/i.test(key)) continue;
-    k = toMonthKey(val);
-    if (k) return k;
-  }
-  return inferMonthKeyFromValuesInOrder(r);
-}
-
-function guessDeptName(r) {
-  // xlsm V1.2: 패스트·인프런 공통으로 본부구분 옆에 소속2(Workday 세부 조직) 존재
-  const v = getField(r, '본부구분', '소속2', '본부', '부서', '부문', 'Div', 'division');
-  if (v != null && v !== '') return String(v).trim();
-  for (const [k, val] of Object.entries(r)) {
-    if (val == null || val === '') continue;
-    if (/(본부|부서|Division|부문|Team|Unit)/i.test(k) && !/법인|메일|주소|course/i.test(k)) return String(val).trim();
-  }
-  return '기타';
-}
-
-function getCorpFromRow(r) {
-  const v = getField(r, '법인구분', '회사', '소속', '법인', 'company', 'corp', 'corp_name', 'organization', 'org_name', 'legal_entity', '소속법인');
-  if (v != null && v !== '') return v;
-  for (const [k, val] of Object.entries(r)) {
-    if (val == null || val === '') continue;
-    if (/^법인구분$|^소속$|^회사$|company|corp_name|organization|legal_entity|소속법인/i.test(k) && !/course|mail|email|member_id|id$/i.test(k)) return val;
-  }
-  return null;
-}
-
-function getHoursRow(r) {
-  const v = getField(r, '학습시간(H)', '학습시간', 'sum_range_time', '학습시간(시간)', '학습시간(H) ');
-  if (v != null && v !== '') return parseFloat(String(v).replace(/,/g, '').trim()) || 0;
-  return 0;
-}
-
-function getMailKey(r) {
-  return getField(r, '메일주소', 'member_email', '이메일', 'email');
-}
-
-function guessDowRaw(r) {
-  const v = getField(r, '접속요일', '요일', '학습요일', 'weekday', 'week_day', 'day_of_week', 'dow', 'weekday_kst', '요일명');
-  if (v != null && v !== '') return v;
-  for (const [k, val] of Object.entries(r)) {
-    if (val == null || val === '') continue;
-    if (/(요일|weekday|day_of_week|^dow$)/i.test(k) && !/date|datetime|created/i.test(k)) return val;
-  }
-  return null;
-}
-
-function isHrTargetFlag(flag) {
-  if (flag === true || flag === 1) return true;
-  const s = String(flag ?? '')
-    .trim()
-    .replace(/\u00a0/g, '')
-    .toUpperCase();
-  return s === 'TRUE' || s === '1';
-}
-
-// ══════════════════════════════════════════
-// 구글 시트 → JSON (gviz + JSONP)
-// Papa.parse(download)는 GitHub Pages 등 교차 출처에서 CORS로 실패함.
-// 스크립트 태그 로드는 CORS 제한이 없어 동일 HTML이 Pages에서도 동작함.
-// ══════════════════════════════════════════
-/** gviz는 날짜/시간 셀을 { v: { v: 45900, f: "2025/9/22" } } 처럼 중첩해 보내는 경우가 있어, 그대로 두면 parseLearningDate가 실패하고 월 키가 깨짐 */
-function gvizCellValue(cell) {
-  if (cell == null) return '';
-  let v = cell.v;
-  while (v != null && typeof v === 'object' && !(v instanceof Date)) {
-    if (v.v !== null && v.v !== undefined && v.v !== '') {
-      v = v.v;
-    } else if (v.f != null && v.f !== '') {
-      return typeof v.f === 'string' ? v.f : String(v.f);
-    } else {
-      v = '';
-      break;
-    }
-  }
-  if (v instanceof Date) return v;
-  if (v !== null && v !== undefined && v !== '') return v;
-  if (cell.f != null && cell.f !== '') return cell.f;
-  return '';
-}
-
-function gvizToObjects(response) {
-  if (!response) throw new Error('시트 응답이 비어 있습니다.');
-  if (response.status === 'error') {
-    const msg = (response.errors || [])
-      .map(e => e.detailed_message || e.message || e.reason)
-      .filter(Boolean)
-      .join(' ') || '시트를 읽을 수 없습니다.';
-    throw new Error(msg);
-  }
-  const table = response.table;
-  if (!table || !table.cols) return [];
-  const seen = {};
-  const keys = table.cols.map((c, i) => {
-    let base = String(c.label || '').trim();
-    if (!base) base = String(c.id || `col${i}`);
-    seen[base] = (seen[base] || 0) + 1;
-    return seen[base] === 1 ? base : `${base}__${seen[base]}`;
-  });
-  return (table.rows || []).map(row => {
-    const obj = {};
-    keys.forEach((key, i) => {
-      const cell = row.c && row.c[i];
-      obj[key] = gvizCellValue(cell);
-    });
-    return obj;
-  });
-}
-
-async function fetchSheetOptional(sheetName) {
-  try {
-    return await fetchSheet(sheetName);
-  } catch (e) {
-    console.warn('[시트 생략]', sheetName, e && e.message);
-    return null;
-  }
-}
-
-/** 피벗 시트에서 Grand Total 행의 B열(강좌 수 등 첫 집계열) 숫자 — 시트 정합성 점검용 */
-function readPivotGrandTotalColB(rows) {
-  if (!rows || !rows.length) return null;
-  for (const r of rows) {
-    const a = r.A;
-    if (a == null || a === '') continue;
-    if (!/grand\s*total/i.test(String(a).trim())) continue;
-    const b = r.B;
-    if (typeof b === 'number' && isFinite(b)) return b;
-    const p = parseFloat(String(b).replace(/,/g, '').replace(/\s/g, ''));
-    return isFinite(p) ? p : null;
-  }
-  return null;
-}
-
-function fetchSheet(sheetName) {
-  return new Promise((resolve, reject) => {
-    const oldGoogle = window.google;
-    let settled = false;
-    const script = document.createElement('script');
-
-    function cleanup() {
-      window.google = oldGoogle;
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    function finish(err, data) {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      cleanup();
-      if (err) reject(err);
-      else resolve(data);
-    }
-
-    const timeout = setTimeout(() => finish(new Error('시트 로딩 시간 초과: ' + sheetName)), 60000);
-
-    window.google = {
-      visualization: {
-        Query: {
-          setResponse(response) {
-            try {
-              const data = gvizToObjects(response);
-              setTimeout(() => finish(null, data), 0);
-            } catch (e) {
-              setTimeout(() => finish(e), 0);
-            }
-          }
-        }
-      }
-    };
-
-    script.onerror = () => finish(new Error('네트워크 오류(차단 또는 시트 이름 확인): ' + sheetName));
-    script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(sheetName)}`;
-    document.head.appendChild(script);
-  });
-}
-
-// ══════════════════════════════════════════
-// 데이터 로드 (구글 시트 → 파싱 → 렌더)
-// ══════════════════════════════════════════
-async function loadData() {
-  showLoading(true);
-  hideError();
-  setRefreshSpinner(true);
-
-  try {
-    document.getElementById('loadingSub').textContent = '패스트캠퍼스 시트 로딩 중...';
-    const fast = await fetchSheet(SHEET_TAB_FAST);
-
-    document.getElementById('loadingSub').textContent = '인프런 시트 로딩 중...';
-    const inf = await fetchSheet(SHEET_TAB_INF);
-
-    document.getElementById('loadingSub').textContent = '인사정보 시트 로딩 중...';
-    const hr = await fetchSheet(SHEET_TAB_HR);
-
-    document.getElementById('loadingSub').textContent = 'KPI(엑셀 연동) 시트 확인 중...';
-    const kpiImport = await fetchSheetOptional(SHEET_TAB_KPI_IMPORT);
-    const dashboardSheet = await fetchSheetOptional(SHEET_TAB_DASHBOARD);
-    const excelKpi = parseKpiTwoColumnSheet(kpiImport) || parseDashboardKpiHeuristic(dashboardSheet);
-
-    document.getElementById('loadingSub').textContent = '피벗(요일) 시트 확인 중...';
-    const pivotFast = await fetchSheetOptional(SHEET_PIVOT_FAST_DOW);
-    const pivotInf = await fetchSheetOptional(SHEET_PIVOT_INF_DOW);
-
-    DATA = buildData(fast, inf, hr, excelKpi);
-    DATA.pivotFastCourseSum = pivotFast ? readPivotGrandTotalColB(pivotFast) : null;
-    DATA.pivotInfCourseSum = pivotInf ? readPivotGrandTotalColB(pivotInf) : null;
-    selectedCorps = [...DATA.corps];
-
-    if (!fast.length && inf.length) {
-      console.warn('[대시보드] 패스트캠퍼스 행이 0건입니다. 시트 탭 이름:', SHEET_TAB_FAST);
-    }
-    if (!inf.length && fast.length) {
-      console.warn('[대시보드] 인프런 행이 0건입니다. 시트 탭 이름:', SHEET_TAB_INF);
-    }
-
-    buildChips();
-    renderAll();
-
-    showLoading(false);
-    document.getElementById('dashboard').style.opacity = '1';
-  } catch (e) {
-    showLoading(false);
-    showError('구글 시트 데이터를 불러오지 못했습니다. 공유 설정(링크 공개)을 확인해주세요.');
-    console.error(e);
-  }
-
-  setRefreshSpinner(false);
-}
-
-// ══════════════════════════════════════════
-// 엑셀 대시보드와 동일 KPI — KPI_HTML(2열) 또는 01_대시보드 그리드에서 추출
-// ══════════════════════════════════════════
-function parseNumCell(v) {
-  if (v == null || v === '') return null;
-  const n = parseFloat(String(v).replace(/,/g, '').replace(/\s/g, ''));
-  return isFinite(n) ? n : null;
-}
-
-/** 시트 KPI_HTML: 1행 헤더(항목|값) + 데이터 행 — 또는 헤더 없이 바로 데이터 */
-function parseKpiTwoColumnSheet(rows) {
-  if (!rows || !rows.length) return null;
-  const keys = Object.keys(rows[0]);
-  if (keys.length < 2) return null;
-  const colA = keys[0];
-  const colB = keys[1];
-  let start = 0;
-  const h0 = String(rows[0][colA] || '').trim();
-  if (/항목|label|key|지표|구분|이름/i.test(h0)) start = 1;
-  const out = { source: SHEET_TAB_KPI_IMPORT };
-  for (let i = start; i < rows.length; i++) {
-    const label = String(rows[i][colA] || '').trim();
-    if (!label) continue;
-    const num = parseNumCell(rows[i][colB]);
-    if (num == null) continue;
-    if (/대상|총원|\(A\)/i.test(label)) out.target = num;
-    else if (/수강.*인원|인원.*\(B\)|\(B\)/i.test(label)) out.enrolled = num;
-    else if (/총\s*학습|학습\s*시간|시간\s*\(H\)|\(H\)|총.*H/i.test(label)) out.hours = num;
-    else if (/수강률|사용률|B\s*\/\s*A/i.test(label)) out.ratePct = num;
-  }
-  if (out.target != null || out.enrolled != null || out.hours != null || out.ratePct != null) return out;
-  return null;
-}
-
-/** 시트 01_대시보드: 같은 행에서 (라벨 셀)(숫자 셀) 인접 쌍 스캔 */
-function parseDashboardKpiHeuristic(rows) {
-  if (!rows || !rows.length) return null;
-  const out = { source: SHEET_TAB_DASHBOARD };
-  rows.forEach(r => {
-    const vals = Object.values(r);
-    for (let i = 0; i < vals.length - 1; i++) {
-      const a = String(vals[i] == null ? '' : vals[i]).trim();
-      const num = parseNumCell(vals[i + 1]);
-      if (!a || num == null) continue;
-      if (/대상\s*총원|총원\s*\(A\)|대상\s*총원/i.test(a)) out.target = num;
-      if (/수강\s*인원|인원\s*\(B\)/i.test(a)) out.enrolled = num;
-      if (/총\s*학습\s*시간|학습\s*시간|총학습/i.test(a)) out.hours = num;
-      if (/수강률|사용률|B\s*\/\s*A/i.test(a)) out.ratePct = num;
-    }
-  });
-  if (out.target != null || out.enrolled != null || out.hours != null || out.ratePct != null) return out;
-  return null;
-}
-
-// ══════════════════════════════════════════
-// 데이터 전처리
-// ══════════════════════════════════════════
-function buildData(fast, inf, hr, excelKpi) {
-  // 최신 날짜 (월 키 추론과 동일한 기준)
-  let maxDate = null;
-  [...fast, ...inf].forEach(r => {
-    const mk = inferMonthKeyForRow(r);
-    const d = mk ? parseLearningDate(mk + '-01') : parseLearningDate(guessMonthFromRow(r));
-    if (d && (!maxDate || d > maxDate)) maxDate = d;
-  });
-  const updateStr = maxDate
-    ? `${maxDate.getFullYear()}-${String(maxDate.getMonth()+1).padStart(2,'0')}-${String(maxDate.getDate()).padStart(2,'0')}`
-    : '—';
-
-  // 접속년월 → 차트용 YYYY-MM (열 이름이 바뀌어도 날짜 후보 열에서 추론)
-  fast.forEach(r => { r._month = inferMonthKeyForRow(r); });
-  inf.forEach(r => { r._month = inferMonthKeyForRow(r); });
-
-  // 인사정보 — 법인별 총원 + 대상총원(A)
-  // Excel/피벗과 맞추기 위해: 대상여부=TRUE이면서 법인명이 VALID_CORPS에 매칭되는 인원만 집계(매칭 실패 행은 제외).
-  const corpTotalMap = {};
-  let grandTotal = 0;
-
-  hr.forEach(r => {
-    if (!isHrTargetFlag(getField(r, '대상여부', '대상 여부'))) return;
-    const c = canonicalCorpName(getCorpFromRow(r));
-    if (!c) return;
-    grandTotal++;
-    corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
-  });
-
-  // 유효 법인 목록
-  const corps = VALID_CORPS.filter(c =>
-    fast.some(r => canonicalCorpName(getCorpFromRow(r)) === c) || inf.some(r => canonicalCorpName(getCorpFromRow(r)) === c)
-  );
-
-  return { fast, inf, hr, corpTotalMap, grandTotal, corps, updateStr, excelKpi: excelKpi || null };
-}
-
-// ══════════════════════════════════════════
-// 필터 칩
-// ══════════════════════════════════════════
-function buildChips() {
-  const el = document.getElementById('corpChips');
-  el.innerHTML = '';
-  DATA.corps.forEach(corp => {
-    const btn = document.createElement('button');
-    btn.className = 'chip active';
-    btn.dataset.corp = corp;
-    btn.textContent = corp;
-    btn.onclick = () => toggleCorp(corp);
-    el.appendChild(btn);
-  });
-}
-
-function toggleCorp(corp) {
-  if (selectedCorps.includes(corp)) {
-    if (selectedCorps.length === 1) return;
-    selectedCorps = selectedCorps.filter(c => c !== corp);
-  } else {
-    selectedCorps.push(corp);
-  }
-  updateChips();
-  renderAll();
-}
-
-function selectAll() { selectedCorps = [...DATA.corps]; updateChips(); renderAll(); }
-function clearAll()  { selectedCorps = [DATA.corps[0]]; updateChips(); renderAll(); }
-
-function updateChips() {
-  document.querySelectorAll('.chip').forEach(b => {
-    b.classList.toggle('active', selectedCorps.includes(b.dataset.corp));
-  });
-}
-
-// ══════════════════════════════════════════
-// 탭
-// ══════════════════════════════════════════
-function setTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.tab-btn.tab-${tab === 'both' ? 'both' : tab}`).classList.add('active');
-  renderAll();
-}
-
-// ══════════════════════════════════════════
-// 필터 헬퍼
-// ══════════════════════════════════════════
-function filtered(arr) {
-  return arr.filter(r => {
-    const c = canonicalCorpName(getCorpFromRow(r));
-    return c && selectedCorps.includes(c);
-  });
-}
-function getFast() { return currentTab === 'inf'  ? [] : filtered(DATA.fast); }
-function getInf()  { return currentTab === 'fast' ? [] : filtered(DATA.inf);  }
-
-function sumHours(arr) {
-  return arr.reduce((s, r) => s + getHoursRow(r), 0);
-}
-
-function isActiveLearningRow(r) {
-  const v = getField(r, '활성여부(최초1회)', '활성여부');
-  if (v === true || v === 1) return true;
-  const s = String(v ?? '').trim().toUpperCase().replace(/\u00a0/g, '');
-  return s === 'TRUE' || s === '1';
-}
-
-function enrolledSet(arr) {
-  const s = new Set();
-  arr.filter(r => isActiveLearningRow(r)).forEach(r => {
-    const u = normalizeId(getMailKey(r)) || r['사번'];
-    if (u) s.add(u);
-  });
-  return s;
-}
-
-// ══════════════════════════════════════════
-// 전체 렌더
-// ══════════════════════════════════════════
-function renderDataWarning() {
-  const el = document.getElementById('dataWarning');
-  if (!el || !DATA) return;
-  const parts = [];
-  if (DATA.fast.length === 0 && DATA.inf.length > 0) {
-    parts.push(`<strong>패스트캠퍼스</strong> 시트가 비어 있거나 탭 이름이 다릅니다. 구글 시트 하단 탭이 <code>${SHEET_TAB_FAST}</code>와 <strong>한 글자도 다르지 않게</strong> 맞춰 주세요. (인프런만 로드되면 그래프·표가 한쪽만 채워집니다.)`);
-  }
-  if (DATA.inf.length === 0 && DATA.fast.length > 0) {
-    parts.push(`<strong>인프런</strong> 시트 행이 0건입니다. 탭 이름: <code>${SHEET_TAB_INF}</code>`);
-  }
-  let unassigned = 0;
-  DATA.hr.forEach(r => {
-    if (isHrTargetFlag(getField(r, '대상여부', '대상 여부')) && !canonicalCorpName(getCorpFromRow(r))) unassigned++;
-  });
-  if (unassigned > 0) {
-    parts.push(`인사정보에서 <strong>대상여부=TRUE</strong>인데 법인명이 매칭되지 않는 행이 <strong>${unassigned}명</strong> 있습니다. 대상총원(KPI)에는 <strong>VALID_CORPS에 맞는 인원만</strong> 포함됩니다.`);
-  }
-  const fhq = DATA.fast.filter(r => canonicalCorpName(getCorpFromRow(r)) === 'KRAFTON HQ').length;
-  if (DATA.fast.length > 0 && fhq === 0) {
-    parts.push(`패스트캠퍼스 로그에 <strong>KRAFTON HQ</strong> 법인 행이 없습니다. ② 본부별 차트는 HQ만 집계하므로 비어 있을 수 있습니다.`);
-  }
-  el.innerHTML = parts.join('<br><br>');
-  el.style.display = parts.length ? 'block' : 'none';
-}
-
-function updatePeriodRange() {
-  const el = document.getElementById('periodRangeLabel');
-  if (!el || !DATA) return;
-  let minM = null, maxM = null;
-  [...DATA.fast, ...DATA.inf].forEach(r => {
-    const mk = r._month || inferMonthKeyForRow(r);
-    if (!mk) return;
-    if (!minM || mk < minM) minM = mk;
-    if (!maxM || mk > maxM) maxM = mk;
-  });
-  const launch = '2025-09-22(런칭)';
-  const cur = DATA.updateStr !== '—' ? DATA.updateStr : '현재';
-  const monthPart = minM && maxM ? ` · 데이터 월 ${minM} ~ ${maxM}` : '';
-  el.textContent = `기간: ${launch} - ${cur}${monthPart}`;
-}
-
-function renderAll() {
-  if (!DATA) return;
-  document.getElementById('updateDate').textContent = DATA.updateStr;
-  updatePeriodRange();
-  renderDataWarning();
-  renderSourceNote();
-  renderKPI();
-  renderMonthly();
-  renderCorpTable();
-  renderDOW();
-  renderDept();
-  renderCourses();
-  updateLabels();
-}
-
-// ── 엑셀/피벗 vs 본 대시보드 지표 안내 (Confluence 게시 시 참고)
-function renderSourceNote() {
-  const el = document.getElementById('sourceNote');
-  if (!el) return;
-  const lines = [];
-  lines.push(`이 HTML의 <strong>수강 인원(B)</strong>은 원본 시트 <strong>${SHEET_TAB_FAST}·${SHEET_TAB_INF}</strong> 로그에서 <strong>고유 이용자</strong>(1회 이상)로 집계합니다. <code>${SHEET_PIVOT_FAST_DOW}</code>의「Course 수강 인원」같은 피벗 값은 보통 <strong>강좌(코스) 건수 합</strong>이라, 한 사람이 여러 강좌를 들으면 합계가 더 커질 수 있습니다.`);
-  lines.push(`엑셀 대시보드와 <strong>상단 KPI 숫자를 맞추려면</strong> 구글 시트에 시트 <code>${SHEET_TAB_KPI_IMPORT}</code>를 추가하고 A열(항목)·B열(값)에 <strong>대상총원(A)·수강인원(B)·총학습시간(H)</strong> 등을 적습니다(엑셀에서 수식 결과만 복사해도 됨). 없으면 <code>${SHEET_TAB_DASHBOARD}</code>에서 인접 (라벨|숫자) 쌍을 자동 추출합니다. <strong>전체</strong> 탭·<strong>전체 법인</strong> 선택 시에만 시트 KPI를 상단 카드에 반영합니다.`);
-  lines.push(`그래프·법인표는 여전히 <strong>${SHEET_TAB_FAST}·${SHEET_TAB_INF}·${SHEET_TAB_HR}</strong> 로그를 집계합니다. 엑셀 V1.2 열 기준: 월=<code>접속년월</code> 등, 법인=<code>법인구분</code>, 본부=<code>본부구분</code>·<code>소속2</code>.`);
-  if (DATA.pivotFastCourseSum != null) {
-    lines.push(`구글 시트 <code>${SHEET_PIVOT_FAST_DOW}</code>의 <strong>Grand Total</strong> 두 번째 열 값: <strong>${DATA.pivotFastCourseSum.toLocaleString()}</strong>. 엑셀(예: 2209)과 다르면 <strong>시트</strong>에서 XLSM 재가져오기, 피벗 데이터 원본 범위, <strong>#REF!</strong>·깨진 수식을 먼저 수정해야 합니다. (HTML만으로는 구글 시트 내부 피벗을 고칠 수 없습니다.)`);
-  }
-  if (DATA.pivotInfCourseSum != null) {
-    lines.push(`<code>${SHEET_PIVOT_INF_DOW}</code> Grand Total(두 번째 열): <strong>${DATA.pivotInfCourseSum.toLocaleString()}</strong>.`);
-  }
-  el.innerHTML = lines.join('<br><br>');
-  el.style.display = 'block';
-}
-
-// ── KPI (excelKpi 있으면 전체 법인·전체 탭일 때 엑셀 대시보드 수치와 맞춤)
-function renderKPI() {
-  const fastArr = getFast(), infArr = getInf();
-  const fastH = sumHours(fastArr), infH = sumHours(infArr);
-  const allSelected = selectedCorps.length === DATA.corps.length;
-  const ek = DATA.excelKpi && allSelected && currentTab === 'both';
-
-  const totalCount = ek && DATA.excelKpi.target != null
-    ? DATA.excelKpi.target
-    : (allSelected
-      ? DATA.grandTotal
-      : selectedCorps.reduce((s, c) => s + (DATA.corpTotalMap[c] || 0), 0));
-
-  const fastSet = enrolledSet(fastArr), infSet = enrolledSet(infArr);
-  const merged = new Set([...fastSet, ...infSet]);
-  let enrolled = currentTab === 'fast' ? fastSet.size : currentTab === 'inf' ? infSet.size : merged.size;
-  if (ek && DATA.excelKpi.enrolled != null) enrolled = DATA.excelKpi.enrolled;
-
-  let rateStr = '—';
-  if (totalCount > 0) {
-    if (ek && DATA.excelKpi.ratePct != null) rateStr = Number(DATA.excelKpi.ratePct).toFixed(1) + '%';
-    else rateStr = ((enrolled / totalCount) * 100).toFixed(1) + '%';
-  }
-
-  document.getElementById('kpiTotal').textContent = totalCount.toLocaleString();
-  document.getElementById('kpiTotalSub').textContent = ek
-    ? `엑셀 동일 · ${DATA.excelKpi.source}`
-    : `${selectedCorps.length}개 법인 선택`;
-  document.getElementById('kpiEnrolled').textContent = enrolled.toLocaleString();
-  document.getElementById('kpiRate').textContent = rateStr;
-  const krs = document.getElementById('kpiRateSub');
-  if (krs) krs.textContent = ek ? `시트 ${DATA.excelKpi.source}` : '선택 법인 기준';
-
-  if (ek && DATA.excelKpi.hours != null) {
-    document.getElementById('kpiHours').textContent = Math.round(DATA.excelKpi.hours).toLocaleString() + 'H';
-    document.getElementById('kpiHoursSub').textContent = '패스트+인프런 (시트 KPI)';
-  } else if (currentTab === 'fast') {
-    document.getElementById('kpiHours').textContent    = Math.round(fastH).toLocaleString() + 'H';
-    document.getElementById('kpiHoursSub').textContent = '패스트캠퍼스';
-  } else if (currentTab === 'inf') {
-    document.getElementById('kpiHours').textContent    = Math.round(infH).toLocaleString() + 'H';
-    document.getElementById('kpiHoursSub').textContent = '인프런';
-  } else {
-    document.getElementById('kpiHours').textContent    = Math.round(fastH + infH).toLocaleString() + 'H';
-    document.getElementById('kpiHoursSub').textContent = `패스트캠퍼스 ${Math.round(fastH).toLocaleString()}H + 인프런 ${Math.round(infH).toLocaleString()}H`;
-  }
-}
-
-/** 첫 달~마지막 달 사이 빈 달은 0으로 채워 선·축이 끊겨 보이지 않게 함 (최대 36개월) */
-function expandMonthlyGaps(sortedMonths, hoursArr, enrollArr) {
-  if (sortedMonths.length === 0) return { months: [], hours: [], enroll: [] };
-  if (sortedMonths.length === 1) {
-    return { months: sortedMonths, hours: hoursArr, enroll: enrollArr };
-  }
-  const map = {};
-  sortedMonths.forEach((mo, i) => {
-    map[mo] = { h: hoursArr[i], e: enrollArr[i] };
-  });
-  const first = sortedMonths[0];
-  const last = sortedMonths[sortedMonths.length - 1];
-  const [fy, fm] = first.split('-').map(Number);
-  const [ly, lm] = last.split('-').map(Number);
-  const span = (ly - fy) * 12 + (lm - fm);
-  if (span > 36) {
-    return { months: sortedMonths, hours: hoursArr, enroll: enrollArr };
-  }
-  const months = [];
-  const hours = [];
-  const enroll = [];
-  let y = fy;
-  let m = fm;
-  while (y < ly || (y === ly && m <= lm)) {
-    const key = `${y}-${String(m).padStart(2, '0')}`;
-    months.push(key);
-    const cell = map[key];
-    hours.push(cell ? cell.h : 0);
-    enroll.push(cell ? cell.e : 0);
-    m++;
-    if (m > 12) {
-      m = 1;
-      y++;
-    }
-  }
-  return { months, hours, enroll };
-}
-
-// ── ① 월별 이중축 선그래프 (학습시간 + 월별 수강인원)
-function aggMonthly(arr) {
-  const m = {};
-  arr.forEach(r => {
-    const mo = r._month || inferMonthKeyForRow(r);
-    if (!mo) return;
-    if (!m[mo]) m[mo] = { hours: 0, users: new Set() };
-    m[mo].hours += getHoursRow(r);
-    if (isActiveLearningRow(r)) {
-      const u = normalizeId(getMailKey(r)) || r['사번'];
-      if (u) m[mo].users.add(u);
-    }
-  });
-  const months = Object.keys(m).sort();
-  const hours = months.map(mo => m[mo].hours);
-  const enroll = months.map(mo => m[mo].users.size);
-  return expandMonthlyGaps(months, hours, enroll);
-}
-
-function lineDualYOptions() {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: { padding: { top: 8, right: 8, bottom: 4, left: 4 } },
-    interaction: { mode: 'index', intersect: false },
-    elements: {
-      line: { borderWidth: 3, tension: 0.35 },
-      point: { radius: 5, hoverRadius: 8, borderWidth: 2, borderColor: '#fff' }
-    },
-    plugins: {
-      legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 }, usePointStyle: true, padding: 14 } },
-      tooltip: {
-        backgroundColor: '#ffffff',
-        borderColor: '#e0e2ea',
-        borderWidth: 1,
-        titleColor: '#6b7280',
-        bodyColor: '#1a1d2e',
-        callbacks: {
-          label(ctx) {
-            const v = ctx.parsed.y;
-            if (ctx.dataset.label === '수강인원(명)') return ` ${ctx.dataset.label}: ${Math.round(v)}명`;
-            return ` ${ctx.dataset.label}: ${v.toFixed(1)}H`;
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        offset: true,
-        grid: { color: 'rgba(0,0,0,.06)' },
-        ticks: {
-          color: '#6b7280',
-          font: { size: 10 },
-          maxRotation: 45,
-          minRotation: 0,
-          autoSkip: true,
-          maxTicksLimit: 14
-        }
-      },
-      y: {
-        type: 'linear',
-        position: 'left',
-        beginAtZero: true,
-        grace: '8%',
-        title: { display: true, text: '학습시간(H)', color: '#6b7280', font: { size: 11 } },
-        grid: { color: 'rgba(0,0,0,.08)' },
-        ticks: { color: '#6b7280' }
-      },
-      y1: {
-        type: 'linear',
-        position: 'right',
-        beginAtZero: true,
-        grace: '8%',
-        title: { display: true, text: '수강인원(명)', color: '#6b7280', font: { size: 11 } },
-        grid: { drawOnChartArea: false },
-        ticks: { color: '#6b7280', precision: 0 }
-      }
-    }
-  };
-}
-
-function buildMonthlyLineData(arr, line1, line2) {
-  const a = aggMonthly(arr);
-  if (!a.months.length) return null;
-  const hours = a.hours.map(v => (typeof v === 'number' && isFinite(v) ? v : 0));
-  const enroll = a.enroll.map(v => (typeof v === 'number' && isFinite(v) ? v : 0));
-  const n = a.months.length;
-  const pr = n <= 2 ? 10 : n <= 6 ? 6 : 4;
-  const fill1 = line1.startsWith('#') ? hexToRgba(line1, 0.16) : 'rgba(198,40,40,0.16)';
-  return {
-    labels: a.months.map(m => m.replace('-', '.')),
-    datasets: [
-      {
-        label: '학습시간(H)',
-        data: hours,
-        yAxisID: 'y',
-        borderColor: line1,
-        backgroundColor: fill1,
-        borderWidth: 3,
-        tension: 0.35,
-        pointRadius: pr,
-        fill: true,
-        spanGaps: true
-      },
-      {
-        label: '수강인원(명)',
-        data: enroll,
-        yAxisID: 'y1',
-        borderColor: line2,
-        backgroundColor: line2,
-        borderWidth: 3,
-        tension: 0.35,
-        pointRadius: pr,
-        fill: false,
-        spanGaps: true
-      }
-    ]
-  };
-}
-
-function hexToRgba(hex, a) {
-  const h = hex.replace('#', '');
-  const v = h.length === 6 ? parseInt(h, 16) : 0;
-  const r = (v >> 16) & 255;
-  const g = (v >> 8) & 255;
-  const b = v & 255;
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-function renderMonthly() {
-  const fastArr = getFast(), infArr = getInf();
-  destroyChart(chartMonthlyFast);
-  destroyChart(chartMonthlyInf);
-  chartMonthlyFast = chartMonthlyInf = null;
-
-  const fcW = document.getElementById('fcMonthlyWrap');
-  const infW = document.getElementById('infMonthlyWrap');
-
-  const L1f = '#c62828', L2f = '#ff8a80';
-  const L1i = '#2e7d32', L2i = '#a5d6a7';
-
-  const emptyMonthlyMsg = '월별 추이 없음\n(날짜·접속년월 열을 찾지 못했습니다. 시트 1행 헤더를 확인하세요)';
-
-  if (currentTab === 'both') {
-    fcW.style.display = '';
-    infW.style.display = '';
-    const dF = buildMonthlyLineData(fastArr, L1f, L2f);
-    const dI = buildMonthlyLineData(infArr, L1i, L2i);
-    if (dF) {
-      setChartEmpty('monthlyChartFast', false);
-      chartMonthlyFast = new Chart(document.getElementById('monthlyChartFast').getContext('2d'), { type: 'line', data: dF, options: lineDualYOptions() });
-    } else {
-      setChartEmpty('monthlyChartFast', true, emptyMonthlyMsg);
-    }
-    if (dI) {
-      setChartEmpty('monthlyChartInf', false);
-      chartMonthlyInf = new Chart(document.getElementById('monthlyChartInf').getContext('2d'), { type: 'line', data: dI, options: lineDualYOptions() });
-    } else {
-      setChartEmpty('monthlyChartInf', true, emptyMonthlyMsg);
-    }
-  } else if (currentTab === 'fast') {
-    fcW.style.display = '';
-    infW.style.display = 'none';
-    const dF = buildMonthlyLineData(fastArr, L1f, L2f);
-    if (dF) {
-      setChartEmpty('monthlyChartFast', false);
-      chartMonthlyFast = new Chart(document.getElementById('monthlyChartFast').getContext('2d'), { type: 'line', data: dF, options: lineDualYOptions() });
-    } else {
-      setChartEmpty('monthlyChartFast', true, emptyMonthlyMsg);
-    }
-  } else {
-    fcW.style.display = 'none';
-    infW.style.display = '';
-    const dI = buildMonthlyLineData(infArr, L1i, L2i);
-    if (dI) {
-      setChartEmpty('monthlyChartInf', false);
-      chartMonthlyInf = new Chart(document.getElementById('monthlyChartInf').getContext('2d'), { type: 'line', data: dI, options: lineDualYOptions() });
-    } else {
-      setChartEmpty('monthlyChartInf', true, emptyMonthlyMsg);
-    }
-  }
-}
-
-// ── 법인별 테이블 (패스트 / 인프런 각각 — 엑셀 대시보드와 동일 구조)
-function renderCorpTable() {
-  function corpEnrolled(arr) {
-    const m = {};
-    arr.filter(r => isActiveLearningRow(r)).forEach(r => {
-      const c = canonicalCorpName(getCorpFromRow(r)), u = normalizeId(getMailKey(r)) || r['사번'];
-      if (c && u) { if (!m[c]) m[c] = new Set(); m[c].add(u); }
-    });
-    return m;
-  }
-  const fm = corpEnrolled(DATA.fast), im = corpEnrolled(DATA.inf);
-
-  function fillCorpTable(tbodyId, platform) {
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
-    tbody.innerHTML = '';
-    let sumT = 0, sumE = 0;
-    selectedCorps.forEach(corp => {
-      const tot = DATA.corpTotalMap[corp] || 0;
-      const enr = platform === 'fast'
-        ? (fm[corp] || new Set()).size
-        : (im[corp] || new Set()).size;
-      sumT += tot; sumE += enr;
-      const rate = tot > 0 ? enr / tot : 0;
-      const rc = rate >= .4 ? 'r-high' : rate >= .25 ? 'r-mid' : 'r-low';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td style="font-weight:600">${corp}</td>
-        <td style="text-align:right" class="num">${tot.toLocaleString()}</td>
-        <td style="text-align:right" class="num">${enr.toLocaleString()}</td>
-        <td style="text-align:right" class="num ${rc}">${(rate * 100).toFixed(1)}%</td>`;
-      tbody.appendChild(tr);
-    });
-    const tr = document.createElement('tr'); tr.className = 'total-row';
-    const r = sumT > 0 ? sumE / sumT : 0;
-    tr.innerHTML = `<td style="font-weight:700">합계</td>
-      <td style="text-align:right" class="num">${sumT.toLocaleString()}</td>
-      <td style="text-align:right" class="num">${sumE.toLocaleString()}</td>
-      <td style="text-align:right" class="num">${(r * 100).toFixed(1)}%</td>`;
+/* ─────────────── DATA ─────────────── */
+const fcCorpData = [
+  { name:'KRAFTON HQ', total:1263, enroll:398, rate:0.315 },
+  { name:'PUBG STUDIOS', total:661, enroll:202, rate:0.306 },
+  { name:'bluehole studio', total:151, enroll:65, rate:0.430 },
+  { name:'inZOI studio', total:131, enroll:23, rate:0.176 },
+  { name:'5minlab', total:113, enroll:18, rate:0.159 },
+  { name:'Rising Wings', total:64, enroll:17, rate:0.266 },
+  { name:'OVERDARE', total:99, enroll:46, rate:0.465 },
+  { name:'Omni Craftlabs', total:93, enroll:42, rate:0.452 },
+  { name:'Flyway Games', total:78, enroll:24, rate:0.308 },
+  { name:'ReLU Games', total:39, enroll:8, rate:0.205 },
+  { name:'Dreamotion', total:30, enroll:16, rate:0.533 },
+  { name:'JOFSOFT', total:9, enroll:2, rate:0.222 },
+  { name:'Loonshot Games', total:40, enroll:1, rate:0.025 },
+  { name:'Olivetree Games', total:16, enroll:5, rate:0.313 },
+  { name:'기타(해외파견)', total:2, enroll:2, rate:1.000 },
+  { name:'합계', total:2789, enroll:869, rate:0.312, isTotal:true },
+];
+const ilCorpData = [
+  { name:'KRAFTON HQ', total:1263, enroll:220, rate:0.174 },
+  { name:'PUBG STUDIOS', total:661, enroll:87, rate:0.132 },
+  { name:'bluehole studio', total:151, enroll:30, rate:0.199 },
+  { name:'inZOI studio', total:131, enroll:11, rate:0.084 },
+  { name:'5minlab', total:113, enroll:9, rate:0.080 },
+  { name:'Rising Wings', total:64, enroll:8, rate:0.125 },
+  { name:'OVERDARE', total:99, enroll:32, rate:0.323 },
+  { name:'Omni Craftlabs', total:93, enroll:12, rate:0.129 },
+  { name:'Flyway Games', total:78, enroll:8, rate:0.103 },
+  { name:'ReLU Games', total:39, enroll:2, rate:0.051 },
+  { name:'Dreamotion', total:30, enroll:3, rate:0.100 },
+  { name:'JOFSOFT', total:9, enroll:2, rate:0.222 },
+  { name:'Loonshot Games', total:40, enroll:1, rate:0.025 },
+  { name:'Olivetree Games', total:16, enroll:2, rate:0.125 },
+  { name:'기타(해외파견)', total:0, enroll:0, rate:0 },
+  { name:'합계', total:2787, enroll:427, rate:0.153, isTotal:true },
+];
+
+// 시계열 데이터 (9월~3월 주간 누적 시간 추정)
+const weeks = ['9/22','10/6','10/20','11/3','11/17','12/1','12/15','12/29','1/12','1/26','2/9','2/23','3/9','3/20'];
+const fcHours = [45,120,230,380,500,610,700,740,820,940,1100,1280,1480,1580];
+const fcUsers = [30,65,110,158,200,240,270,285,310,350,390,420,460,480];
+const ilHours = [20,55,110,190,260,330,380,400,440,510,590,680,790,840];
+const ilUsers = [15,30,55,80,100,120,135,142,158,178,200,220,248,260];
+
+// 본부별 데이터 (KRAFTON HQ 주요 본부)
+const deptLabels = ['AI Research','AI Studio','Chairman Off.','Corp Dev','Creative Pro.','Finance','Global Pub.','HR Team','IT','KRAFTON HQ','Legal','PUBG F&P','R&D','Space & Prop','Tech Trans.','Accounting','Auth. Mgmt','Black Budget','Core AV','Core Tech','Mobile Svc','Platform Ops','PUBG IC','Translation'];
+const fcDeptHours = [120,85,40,200,380,55,290,70,150,620,45,180,95,60,110,85,38,95,140,320,95,80,160,55];
+const fcDeptUsers = [8,5,3,12,25,4,18,5,10,45,3,12,6,4,8,5,2,6,9,22,6,5,11,4];
+const ilDeptHours = [80,55,25,140,260,35,180,45,95,420,30,120,60,40,75,55,25,65,90,220,60,50,105,35];
+const ilDeptUsers = [5,3,2,8,17,2,12,3,6,30,2,8,4,3,5,3,1,4,6,15,4,3,7,2];
+
+const days = ['일','월','화','수','목','금','토'];
+const fcWeekday = [6,22,19,17,16,17,3];
+const ilWeekday = [10,18,15,16,14,13,6];  // approximate from image
+
+const fcRankData = [
+  { name:'대기업도 못 쓰는 이슈들! ChatGPT & GPT4 바이블', count:339, hours:285 },
+  { name:'복잡으로 끝내는 최신 AI 업무 자동화 with Claude', count:99, hours:132 },
+  { name:'2025 실전자를 위한 업무 주도 10에 늘어나는 구로왕 AI · Gemini 바이블', count:92, hours:149 },
+  { name:'n8n 하나로 끝내는 AI 자동화의 모든 것', count:60, hours:166 },
+  { name:'2025 AI 시대 실전가를 위한 비판적/분석적 700가지 ChatGPT 활용 바이블', count:49, hours:122 },
+];
+const ilRankData = [
+  { name:'(인프라위에서 베스트픽) 요즘 많이 AI 채도를 전문가가 되는 법, n8n 만에 가이드', count:80, hours:151 },
+  { name:'LangGraph를 활용한 AI Agent 개발 (feat MCP)', count:58, hours:61 },
+  { name:'회사에서 바로 쓰는 업무자동화 AI 에이전트 (w. n8n, LangGraph)', count:56, hours:54 },
+  { name:'RAG를 활용한 LLM Application 개발 (feat. LangChain)', count:52, hours:37 },
+  { name:'AI 에이전트 입문 과제기, Claude MCP로 끝내는 업무 자동화', count:49, hours:35 },
+];
+
+/* ─────────────── RENDER TABLES ─────────────── */
+function renderCorpTable(id, data, colorClass) {
+  const tbody = document.getElementById(id);
+  data.forEach(r => {
+    const tr = document.createElement('tr');
+    const pct = (r.rate * 100).toFixed(0) + '%';
+    const barW = Math.min(r.rate * 100, 100);
+    const fillColor = colorClass === 'pct-fc' ? 'var(--fc-pink)' : 'var(--il-green)';
+    tr.innerHTML = `
+      <td>${r.name}</td>
+      <td>${r.total.toLocaleString()}</td>
+      <td>${r.enroll.toLocaleString()}</td>
+      <td>
+        <div class="pct-bar-wrap ${colorClass}">
+          <div class="pct-bar"><div class="pct-bar-fill" style="width:${barW}%"></div></div>
+          <span class="pct-text">${pct}</span>
+        </div>
+      </td>`;
+    if (r.isTotal) tr.style.borderTop = '1px solid var(--border)';
     tbody.appendChild(tr);
-  }
-
-  fillCorpTable('corpTableFast', 'fast');
-  fillCorpTable('corpTableInf', 'inf');
-
-  const wf = document.getElementById('corpTableFastWrap');
-  const wi = document.getElementById('corpTableInfWrap');
-  if (wf && wi) {
-    wf.style.display = currentTab === 'inf' ? 'none' : '';
-    wi.style.display = currentTab === 'fast' ? 'none' : '';
-  }
-}
-
-// ── ③ 요일별 학습시간 비중 — 세로 막대
-function dowHoursMap(arr) {
-  const m = {};
-  arr.forEach(r => {
-    const d = normalizeDowLabel(guessDowRaw(r));
-    if (d) m[d] = (m[d] || 0) + getHoursRow(r);
   });
-  return m;
 }
-function dowPctSeries(map) {
-  const total = DOW_ORDER.reduce((s, d) => s + (map[d] || 0), 0);
-  return DOW_ORDER.map(d => (total > 0 ? ((map[d] || 0) / total) * 100 : 0));
-}
+renderCorpTable('fcTable', fcCorpData, 'pct-fc');
+renderCorpTable('ilTable', ilCorpData, 'pct-il');
 
-function renderDOW() {
-  destroyChart(chartDowFast);
-  destroyChart(chartDowInf);
-  chartDowFast = chartDowInf = null;
-
-  const sec2 = document.getElementById('dowSection2');
-  const barOpts = () => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#ffffff',
-        borderColor: '#e0e2ea',
-        borderWidth: 1,
-        callbacks: {
-          label(ctx) {
-            const pct = ctx.parsed.y;
-            const map = ctx.chart.dowMapRef;
-            const d = DOW_ORDER[ctx.dataIndex];
-            const h = map && map[d] != null ? map[d] : 0;
-            return ` 비중 ${pct.toFixed(1)}% · ${h.toFixed(0)}H`;
-          }
-        }
-      }
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' } } },
-      y: {
-        beginAtZero: true,
-        suggestedMax: 35,
-        title: { display: true, text: '비중 (%)', color: '#6b7280', font: { size: 11 } },
-        ticks: { callback: v => v + '%', color: '#6b7280' },
-        grid: { color: 'rgba(0,0,0,.08)' }
-      }
-    }
+/* ─────────────── RANK TABLES ─────────────── */
+function renderRank(id, data) {
+  const tbody = document.getElementById(id);
+  data.forEach((r, i) => {
+    const cls = i===0?'top1':i===1?'top2':i===2?'top3':'';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="white-space:nowrap"><span class="rank-num ${cls}">${i+1}</span></td>
+      <td><div class="course-name">${r.name}</div></td>
+      <td>${r.count}</td>
+      <td>${r.hours}h</td>`;
+    tbody.appendChild(tr);
   });
-
-  function drawDow(canvasId, arr, fill, stroke) {
-    const map = dowHoursMap(arr);
-    const data = dowPctSeries(map);
-    const ctx = document.getElementById(canvasId).getContext('2d');
-    const ch = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: DOW_ORDER,
-        datasets: [{
-          label: '비중',
-          data,
-          backgroundColor: fill,
-          borderColor: stroke,
-          borderWidth: 1,
-          borderRadius: 4
-        }]
-      },
-      options: barOpts()
-    });
-    ch.dowMapRef = map;
-    return ch;
-  }
-
-  if (currentTab === 'both') {
-    chartDowFast = drawDow('dowChartFast', getFast(), 'rgba(211,47,47,.45)', '#c62828');
-    chartDowInf = drawDow('dowChartInf', getInf(), 'rgba(56,142,60,.45)', '#2e7d32');
-    sec2.style.display = 'block';
-  } else if (currentTab === 'fast') {
-    chartDowFast = drawDow('dowChartFast', getFast(), 'rgba(211,47,47,.45)', '#c62828');
-    sec2.style.display = 'none';
-  } else {
-    chartDowFast = drawDow('dowChartFast', getInf(), 'rgba(56,142,60,.45)', '#2e7d32');
-    sec2.style.display = 'none';
-  }
 }
+renderRank('fcRank', fcRankData);
+renderRank('ilRank', ilRankData);
 
-// ── ② 본부별 — 이중축 선그래프 (누적 학습시간 + 활성유저)
-function deptAgg(arr) {
-  const m = {};
-  arr.filter(r => canonicalCorpName(getCorpFromRow(r)) === 'KRAFTON HQ').forEach(r => {
-    const d = guessDeptName(r);
-    if (!m[d]) m[d] = { hours: 0, users: new Set() };
-    m[d].hours += getHoursRow(r);
-    if (isActiveLearningRow(r)) {
-      const u = normalizeId(getMailKey(r)) || r['사번'];
-      if (u) m[d].users.add(u);
-    }
-  });
-  return Object.entries(m).map(([n, v]) => ({ name: n, hours: v.hours, users: v.users.size }))
-    .sort((a, b) => b.hours - a.hours).slice(0, 10);
-}
+/* ─────────────── CHART.JS DEFAULTS ─────────────── */
+Chart.defaults.color = '#8890b0';
+Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+Chart.defaults.font.size = 10;
 
-function deptLineDualYOptions(lineColor) {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: 'index', intersect: false },
-    elements: {
-      line: { borderWidth: 2.5, tension: 0.22 },
-      point: { radius: 4, hoverRadius: 7, borderWidth: 2, borderColor: '#fff' }
-    },
-    plugins: {
-      legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } },
-      tooltip: {
-        backgroundColor: '#ffffff',
-        borderColor: '#e0e2ea',
-        borderWidth: 1,
-        callbacks: {
-          label(ctx) {
-            const v = ctx.parsed.y;
-            if (ctx.dataset.label === '활성유저(명)') return ` ${ctx.dataset.label}: ${Math.round(v)}명`;
-            return ` ${ctx.dataset.label}: ${v.toFixed(1)}H`;
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        offset: true,
-        grid: { display: false },
-        ticks: { maxRotation: 40, minRotation: 0, font: { size: 9 }, autoSkip: false }
-      },
-      y: {
-        type: 'linear',
-        position: 'left',
-        beginAtZero: true,
-        grace: '8%',
-        title: { display: true, text: '누적 학습시간(H)', color: '#6b7280', font: { size: 11 } },
-        grid: { color: 'rgba(0,0,0,.08)' }
-      },
-      y1: {
-        type: 'linear',
-        position: 'right',
-        beginAtZero: true,
-        grace: '8%',
-        title: { display: true, text: '활성유저(명)', color: lineColor, font: { size: 11 } },
-        grid: { drawOnChartArea: false },
-        ticks: { precision: 0 }
-      }
-    }
-  };
-}
+const gridLine = { color: 'rgba(42,47,69,0.8)', lineWidth: 1 };
+const noGrid = { display: false };
 
-function renderDeptLines(canvasId, rows, lineColor) {
-  if (!rows.length) {
-    setChartEmpty(canvasId, true);
-    return null;
-  }
-  setChartEmpty(canvasId, false);
-  const labels = rows.map(d => d.name);
-  const hrs = rows.map(d => (typeof d.hours === 'number' && isFinite(d.hours) ? d.hours : 0));
-  const usr = rows.map(d => (typeof d.users === 'number' && isFinite(d.users) ? d.users : 0));
-  return new Chart(document.getElementById(canvasId).getContext('2d'), {
-    type: 'line',
+/* ─────────────── LINE CHARTS ─────────────── */
+function makeLineChart(id, color, hours, users) {
+  const ctx = document.getElementById(id).getContext('2d');
+  const soft = color + '30';
+  return new Chart(ctx, {
     data: {
-      labels,
+      labels: weeks,
       datasets: [
         {
-          label: '누적 학습시간(H)',
-          data: hrs,
+          type:'bar', label:'누적 학습시간',
+          data: hours,
+          backgroundColor: color + '20',
+          borderColor: color + '60',
+          borderWidth: 1,
           yAxisID: 'y',
-          borderColor: '#616161',
-          backgroundColor: '#616161',
-          borderWidth: 2.5,
-          tension: 0.22,
-          pointRadius: 4,
-          fill: false,
-          spanGaps: true
+          borderRadius: 2,
         },
         {
-          label: '활성유저(명)',
-          data: usr,
-          yAxisID: 'y1',
-          borderColor: lineColor,
-          backgroundColor: lineColor,
-          borderWidth: 2.5,
-          tension: 0.22,
-          pointRadius: 4,
-          fill: false,
-          spanGaps: true
+          type:'line', label:'수강인원',
+          data: users,
+          borderColor: color,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: color,
+          pointRadius: 3, pointHoverRadius: 5,
+          borderWidth: 2,
+          tension: 0.4,
+          yAxisID: 'y2',
         }
       ]
     },
-    options: deptLineDualYOptions(lineColor)
-  });
-}
-
-function renderDept() {
-  destroyChart(chartDeptFast);
-  destroyChart(chartDeptInf);
-  chartDeptFast = chartDeptInf = null;
-
-  const p2 = document.getElementById('deptPanel2');
-  const red = '#d32f2f';
-  const green = '#388e3c';
-
-  if (currentTab === 'both') {
-    chartDeptFast = renderDeptLines('deptChartFast', deptAgg(getFast()), red);
-    chartDeptInf = renderDeptLines('deptChartInf', deptAgg(getInf()), green);
-    p2.style.display = 'block';
-  } else if (currentTab === 'fast') {
-    chartDeptFast = renderDeptLines('deptChartFast', deptAgg(getFast()), red);
-    p2.style.display = 'none';
-  } else {
-    chartDeptFast = renderDeptLines('deptChartFast', deptAgg(getInf()), green);
-    p2.style.display = 'none';
-  }
-}
-
-// ── 인기 강좌
-function renderCourses() {
-  function topCourse(arr, col) {
-    const m = {};
-    arr.forEach(r => {
-      let n = r[col];
-      if (!n && col === 'course_name') n = getField(r, 'product_name', '강의명', '코스명');
-      if (!n && col === '강의명') n = getField(r, 'course_name', 'product_name', '강의명');
-      if (!n) return;
-      if (!m[n]) m[n] = { users: new Set(), hours: 0 };
-      m[n].hours += getHoursRow(r);
-      if (isActiveLearningRow(r)) {
-        const u = normalizeId(getMailKey(r)) || r['사번']; if (u) m[n].users.add(u);
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: { legend:{ display:false }, tooltip: {
+        backgroundColor:'#1a1d27', borderColor:'#2a2f45', borderWidth:1,
+        titleFont:{weight:'600'}, padding:10,
+      }},
+      scales: {
+        x: { grid: gridLine, ticks:{ maxRotation:0, font:{size:9} } },
+        y: { grid: gridLine, position:'left', ticks:{ font:{size:9} },
+             title:{ display:true, text:'시간', font:{size:9}, color:'#555f82' } },
+        y2: { position:'right', grid: noGrid, ticks:{ font:{size:9}, color: color },
+              title:{ display:true, text:'명', font:{size:9}, color: color } },
       }
-    });
-    return Object.entries(m).map(([n, v]) => ({ name: n, users: v.users.size, hours: v.hours }))
-      .sort((a, b) => b.users - a.users).slice(0, 5);
-  }
-  const p2 = document.getElementById('coursePanel2');
-  if (currentTab === 'both') {
-    renderCourseTable('courseTable1', topCourse(getFast(), 'course_name'), 'var(--fast)');
-    renderCourseTable('courseTable2', topCourse(getInf(), '강의명'), 'var(--inf)');
-    p2.style.display = 'block';
-  } else if (currentTab === 'fast') {
-    renderCourseTable('courseTable1', topCourse(getFast(), 'course_name'), 'var(--fast)');
-    p2.style.display = 'none';
-  } else {
-    renderCourseTable('courseTable1', topCourse(getInf(), '강의명'), 'var(--inf)');
-    p2.style.display = 'none';
-  }
-}
-function renderCourseTable(id, arr, color) {
-  const tbody = document.getElementById(id); tbody.innerHTML = '';
-  if (!arr.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">데이터 없음</td></tr>'; return; }
-  arr.forEach((r, i) => {
-    const rk = i + 1, rc = rk===1?'rk1':rk===2?'rk2':rk===3?'rk3':'rkn';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><span class="rank-badge ${rc}">${rk}</span></td>
-      <td style="font-size:11px;line-height:1.4;word-break:keep-all;max-width:250px">${r.name}</td>
-      <td style="text-align:right;font-family:'Space Mono',monospace;font-size:11px;color:${color}">${r.users}</td>
-      <td style="text-align:right;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">${r.hours.toFixed(1)}H</td>`;
-    tbody.appendChild(tr);
+    }
   });
 }
+makeLineChart('chartFC', '#ff6b8a', fcHours, fcUsers);
+makeLineChart('chartIL', '#3ecf8e', ilHours, ilUsers);
 
-// ── 라벨 업데이트
-function updateLabels() {
-  const isFast = currentTab === 'fast', isInf = currentTab === 'inf';
-  const mt = document.getElementById('monthTitle');
-  if (mt) {
-    mt.textContent = '① 법인·기간별 이용 현황' + (isFast ? ' (패스트캠퍼스)' : isInf ? ' (인프런)' : ' (전체)');
-  }
-  document.getElementById('dowTitle1').innerHTML =
-    `<span class="dot ${isInf ? 'g' : 'b'}"></span> <span class="section-num">③</span> 요일별 학습시간 비중${isFast ? ' — 패스트캠퍼스' : isInf ? ' — 인프런' : ''}`;
-  document.getElementById('deptTitle1').innerHTML =
-    `<span class="dot ${isInf ? 'g' : 'b'}"></span> <span class="section-num">②</span> KRAFTON HQ 본부별 이용 현황${currentTab === 'both' ? ' — 패스트캠퍼스' : isInf ? ' — 인프런' : ''}`;
-  document.getElementById('courseTitle1').innerHTML =
-    `<span class="dot ${isInf ? 'g' : 'b'}"></span> 인기 강좌 순위 <span class="period-badge">TOP 5</span>${isFast ? ' — 패스트캠퍼스' : isInf ? ' — 인프런' : ''}`;
+/* ─────────────── BAR CHARTS (본부별) ─────────────── */
+function makeDeptChart(id, color, hours, users) {
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, {
+    data: {
+      labels: deptLabels,
+      datasets: [
+        {
+          type:'bar', label:'누적 학습시간',
+          data: hours,
+          backgroundColor: color + '35',
+          borderColor: color + '80',
+          borderWidth: 1,
+          yAxisID: 'y',
+          borderRadius: 2,
+        },
+        {
+          type:'line', label:'활성유저',
+          data: users,
+          borderColor: color,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: color,
+          pointRadius: 3,
+          borderWidth: 2,
+          tension: 0.3,
+          yAxisID: 'y2',
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: { legend:{ display:false }, tooltip: {
+        backgroundColor:'#1a1d27', borderColor:'#2a2f45', borderWidth:1, padding:10,
+      }},
+      scales: {
+        x: { grid: gridLine, ticks:{ maxRotation:45, font:{size:8} } },
+        y: { grid: gridLine, position:'left', ticks:{ font:{size:9} } },
+        y2: { position:'right', grid: noGrid, ticks:{ font:{size:9}, color: color } },
+      }
+    }
+  });
 }
+makeDeptChart('chartFCDept', '#ff6b8a', fcDeptHours, fcDeptUsers);
+makeDeptChart('chartILDept', '#3ecf8e', ilDeptHours, ilDeptUsers);
 
-// ══════════════════════════════════════════
-// UI 헬퍼
-// ══════════════════════════════════════════
-function showLoading(v) { document.getElementById('loadingScreen').classList.toggle('hidden', !v); }
-function hideError() { document.getElementById('errorBanner').classList.remove('show'); }
-function showError(msg) {
-  const b = document.getElementById('errorBanner'); b.classList.add('show');
-  document.getElementById('errorMsg').textContent = msg;
+/* ─────────────── WEEKDAY BAR CHARTS ─────────────── */
+function makeWeekdayChart(id, color, data) {
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: days,
+      datasets: [{
+        data: data,
+        backgroundColor: data.map((v, i) => v === Math.max(...data) ? color : color + '50'),
+        borderColor: color,
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{ display:false }, tooltip: {
+        backgroundColor:'#1a1d27', borderColor:'#2a2f45', borderWidth:1, padding:10,
+        callbacks: { label: ctx => ` ${ctx.raw}%` }
+      }},
+      scales: {
+        x: { grid: noGrid, ticks:{ font:{size:11} } },
+        y: { grid: gridLine, ticks:{ font:{size:9}, callback: v => v+'%' }, max:30 }
+      }
+    }
+  });
 }
-function setRefreshSpinner(v) {
-  const icon = document.getElementById('refreshIcon');
-  icon.className = v ? 'spin' : '';
-  icon.textContent = '↻';
-}
-
-// ══════════════════════════════════════════
-// 시작
-// ══════════════════════════════════════════
-loadData();
+makeWeekdayChart('chartFCWeekday', '#ff6b8a', fcWeekday);
+makeWeekdayChart('chartILWeekday', '#3ecf8e', ilWeekday);
 </script>
 </body>
 </html>
