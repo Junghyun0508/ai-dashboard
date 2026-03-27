@@ -349,7 +349,7 @@ function buildData(fast, inf, hr) {
   let grandTotal = 0;  // 대상여부=TRUE 전체 합계 (법인 무관)
   hr.forEach(r => {
     const flag = r['대상여부'];
-    const isTarget = flag === true || flag === 'TRUE' || flag === 'True' || flag == 1 || flag === '1';
+    const isTarget = flag === 'TRUE';  // 엑셀 =COUNTIF(인사정보!AF:AF,TRUE)와 동일
     if (isTarget) {
       grandTotal++;  // 전체 합계는 법인 필터 없이
       const c = r['법인구분'];
