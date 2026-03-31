@@ -292,7 +292,7 @@ td.r{text-align:right;font-family:'Space Mono',monospace;font-size:10px;}
 </div>
 
 <script>
-const SHEET_ID = '1FPiXIDJHPjd4-96MKYXoUe-9Bvu70mD37noA55dXR74';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyRix2sDQGImxJOpB8E3h_VhGaAS843d_9c3YsjQda-Kk6T8TnKQ_sTCUTyqwNvr1v4/exec';
 const VALID_CORPS = ['5minlab','Dreamotion','Flyway Games','JOFSOFT','KRAFTON HQ',
   'Loonshot Games','OVERDARE','Olivetree Games','Omni Craftlabs','PUBG STUDIOS',
   'ReLU Games','Rising Wings','bluehole studio','inZOI studio','기타(해외파견)'];
@@ -305,7 +305,7 @@ Chart.defaults.font.family="'Noto Sans KR',sans-serif";
 Chart.defaults.font.size=10;
 Chart.defaults.color='#64748b';
 
-function sheetUrl(n){return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(n)}`;}
+function sheetUrl(n){return `${GAS_URL}?sheet=${encodeURIComponent(n)}`;}
 
 function canonicalCorpName(raw){
   if(!raw)return null;
@@ -341,9 +341,15 @@ async function loadData(){
 }
 
 function fetchSheet(n){
-  return new Promise((res,rej)=>{
-    Papa.parse(sheetUrl(n),{download:true,header:true,skipEmptyLines:true,complete:r=>res(r.data),error:e=>rej(e)});
-  });
+  return fetch(sheetUrl(n))
+    .then(r=>{
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    })
+    .then(data=>{
+      // GAS가 빈 헤더 키를 '' 로 반환할 수 있으므로 정리
+      return data.filter(r=>r!==null&&typeof r==='object');
+    });
 }
 
 function build(fast,inf,hr,fcPivot,infPivot){
