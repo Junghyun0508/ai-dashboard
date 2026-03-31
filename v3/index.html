@@ -86,8 +86,8 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .ps-val.fc{color:var(--fc);}
 .ps-val.inf{color:var(--inf);}
 
-.platform-body{display:grid;grid-template-columns:1fr 280px;gap:0;}
-.chart-area{padding:16px;border-right:1px solid var(--border);}
+.platform-body{display:grid;grid-template-columns:1fr 260px;gap:0;}
+.chart-area{padding:14px 16px;border-right:1px solid var(--border);}
 .chart-title{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
 .chart-legend{display:flex;gap:12px;font-size:10px;color:var(--muted);}
 .leg-dot{width:10px;height:3px;border-radius:2px;display:inline-block;}
@@ -206,7 +206,7 @@ td.r{text-align:right;font-family:'Space Mono',monospace;}
             <span><span class="leg-dot" style="background:#fb923c"></span> 수강인원</span>
           </div>
         </div>
-        <canvas id="fcChart" height="130"></canvas>
+        <div style="position:relative;height:180px;"><canvas id="fcChart"></canvas></div>
       </div>
       <div class="table-area">
         <div class="ta-title">법인별 이용 현황</div>
@@ -238,7 +238,7 @@ td.r{text-align:right;font-family:'Space Mono',monospace;}
             <span><span class="leg-dot" style="background:#34d399"></span> 수강인원</span>
           </div>
         </div>
-        <canvas id="infChart" height="130"></canvas>
+        <div style="position:relative;height:180px;"><canvas id="infChart"></canvas></div>
       </div>
       <div class="table-area">
         <div class="ta-title">법인별 이용 현황</div>
@@ -446,6 +446,7 @@ function renderPlatformChart(canvasId, platform, arr, chartRef, setRef, color1, 
     },
     options:{
       responsive:true,
+      maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',borderColor:'#e2e6ef',borderWidth:1,titleColor:'#64748b',bodyColor:'#1e293b',callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y.toLocaleString()}${c.datasetIndex===0?'H':'명'}`}}},
       scales:{
         x:{grid:{display:false},ticks:{color:'#94a3b8'}},
