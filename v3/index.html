@@ -324,7 +324,10 @@ async function loadData(){
     const inf=await fetchSheet('인프런');
     document.getElementById('lsub').textContent='인사정보 시트 로딩...';
     const hr=await fetchSheet('인사정보');
-    DATA=build(fast,inf,hr);
+    document.getElementById('lsub').textContent='인기 강좌 데이터 로딩...';
+    const fcPivot=await fetchSheet('F_피벗(요일)');
+    const infPivot=await fetchSheet('I_피벗(요일)');
+    DATA=build(fast,inf,hr,fcPivot,infPivot);
     selectedCorps=[...DATA.corps];
     buildChips();
     renderAll();
@@ -343,7 +346,7 @@ function fetchSheet(n){
   });
 }
 
-function build(fast,inf,hr){
+function build(fast,inf,hr,fcPivot,infPivot){
   function toMonth(v){if(!v)return null;const d=new Date(v);return isNaN(d)?null:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
   fast.forEach(r=>{r._month=toMonth(r['접속년월']);});
   inf.forEach(r=>{r._month=toMonth(r['접속년월']||r['학습시작 일자']);});
@@ -363,7 +366,43 @@ function build(fast,inf,hr){
   });
 
   const corps=VALID_CORPS.filter(c=>fast.some(r=>canonicalCorpName(r['법인구분'])===c)||inf.some(r=>canonicalCorpName(r['법인구분'])===c));
-  return{fast,inf,hr,corpTotalMap,grandTotal,corps,updateStr};
+  // 피벗 시트에서 인기 강좌 파싱
+  function parseCourseRanking(rows, nameCol, userCol, hourCol, excludeVal) {
+    return rows
+      .filter(r => r[nameCol] && r[nameCol] !== excludeVal && r[nameCol] !== '행 레이블')
+      .map(r => ({
+        name: String(r[nameCol]).trim(),
+        users: parseFloat(r[userCol]) || 0,
+        hours: parseFloat(r[hourCol]) || 0
+      }))
+      .filter(r => r.users > 0)
+      .sort((a,b) => b.users - a.users)
+      .slice(0, 5);
+  }
+
+  // F_피벗(요일): 헤더행='행 레이블'
+  const fcCourses = parseCourseRanking(
+    fcPivot,
+    '행 레이블',
+    '합계 : Course 수강 인원',
+    '합계 : 학습시간(H)',
+    '총합계'
+  );
+
+  // I_피벗(요일): skipEmptyLines로 빈행 제거되므로 첫 행이 헤더
+  // 실제 헤더 확인 후 파싱
+  const infNameCol = Object.keys(infPivot[0] || {})[0];
+  const infUserCol = Object.keys(infPivot[0] || {})[1];
+  const infHourCol = Object.keys(infPivot[0] || {})[2];
+  const infCourses = parseCourseRanking(
+    infPivot,
+    infNameCol,
+    infUserCol,
+    infHourCol,
+    '총합계'
+  );
+
+  return{fast,inf,hr,corpTotalMap,grandTotal,corps,updateStr,fcCourses,infCourses};
 }
 
 function buildChips(){
@@ -453,7 +492,7 @@ function renderAll(){
     renderCorpTable('fcTable',fa);
     renderDeptChart('deptFCChart',fa,cDeptFC,c=>cDeptFC=c,'#e05c00');
     renderDowChart('dowFCChart',fa,cDowFC,c=>cDowFC=c,'rgba(224,92,0,0.7)');
-    renderCourseTable('fcCourseTable',fa,'course_name');
+    renderCourseTable('fcCourseTable',DATA.fcCourses);
   }
   if(currentTab!=='fast'){
     document.getElementById('infTotalH').textContent=Math.round(iH).toLocaleString()+'H';
@@ -462,7 +501,7 @@ function renderAll(){
     renderCorpTable('infTable',ia);
     renderDeptChart('deptINFChart',ia,cDeptINF,c=>cDeptINF=c,'#059669');
     renderDowChart('dowINFChart',ia,cDowINF,c=>cDowINF=c,'rgba(5,150,105,0.7)');
-    renderCourseTable('infCourseTable',ia,'강의명');
+    renderCourseTable('infCourseTable',DATA.infCourses);
   }
 }
 
@@ -570,24 +609,15 @@ function renderDowChart(id,arr,chartRef,setRef,color){
   setRef(newC);
 }
 
-// 인기 강좌 테이블
-function renderCourseTable(id,arr,col){
-  const m={};
-  arr.forEach(r=>{
-    const n=r[col];if(!n||n==='null')return;
-    if(!m[n])m[n]={users:new Set(),hours:0};
-    m[n].hours+=(parseFloat(r['학습시간(H)'])||0);
-    if(r['활성여부(최초1회)']==1||r['활성여부(최초1회)']==='TRUE'){
-      const u=normalizeId(r['메일주소'])||r['사번'];if(u)m[n].users.add(u);
-    }
-  });
-  const sorted=Object.entries(m).map(([n,v])=>({name:n,users:v.users.size,hours:v.hours})).sort((a,b)=>b.users-a.users).slice(0,5);
-  const tbody=document.getElementById(id);tbody.innerHTML='';
-  sorted.forEach((r,i)=>{
+// 인기 강좌 테이블 (피벗 시트 데이터 사용)
+function renderCourseTable(id, courses){
+  const tbody=document.getElementById(id); tbody.innerHTML='';
+  if(!courses||!courses.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:12px">데이터 없음</td></tr>';return;}
+  courses.forEach((r,i)=>{
     const rk=i+1;
     const rkClass=rk===1?'rk1':rk===2?'rk2':rk===3?'rk3':'rkn';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td style="text-align:center"><span class="rank-badge ${rkClass}">${rk}</span></td>
+    tr.innerHTML=`<td style="text-align:center;width:28px"><span class="rank-badge ${rkClass}">${rk}</span></td>
       <td style="font-size:10px;line-height:1.4;word-break:keep-all">${r.name}</td>
       <td class="r" style="font-weight:700;color:var(--accent)">${r.users.toLocaleString()}</td>
       <td class="r">${r.hours.toFixed(1)}</td>`;
