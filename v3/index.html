@@ -292,6 +292,10 @@ async function loadData() {
       const daily = await fetchJSONP(`${GAS_URL}?type=daily`, 120000);
       if (!daily.error && daily.dailyStats) {
         globalData.dailyStats = daily.dailyStats;
+        if (daily.hqDeptStats) {
+          globalData.hqDeptStats = daily.hqDeptStats;
+          renderDept(globalData);
+        }
         updateDailyChart('fc', globalData);
         updateDailyChart('inf', globalData);
       }
@@ -329,11 +333,16 @@ function render(D) {
   document.getElementById('kpiRate').textContent = (rate*100).toFixed(1) + '%';
 
   document.getElementById('periodEnd').textContent = D.updatedAt;
+  globalData = D;
+  renderCorpFilter('fcCorpFilter', D.entityStats.filter(d=>d.name&&d.name!=='소속').map(d=>d.name), selectedFCCorps, 'fc', D);
+  renderCorpFilter('infCorpFilter', D.entityStats.filter(d=>d.name&&d.name!=='소속').map(d=>d.name), selectedINFCorps, 'inf', D);
+  D.entityStats.filter(d=>d.name&&d.name!=='소속').forEach(d=>{selectedFCCorps.add(d.name);selectedINFCorps.add(d.name);});
+  renderEntityTable('fcEntityRows', D.entityStats, selectedFCCorps, 'fc');
+  renderEntityTable('infEntityRows', D.entityStats, selectedINFCorps, 'inf');
   renderEntity(D);
   renderDow(D);
   renderCourses(D);
   renderCats(D);
-  renderDept(D);
   renderSummary(D);
 }
 
