@@ -262,21 +262,54 @@ Chart.defaults.borderColor='rgba(99,179,237,0.1)';
 Chart.defaults.font.family="'Space Mono','Noto Sans KR',sans-serif";
 Chart.defaults.font.size=18;
 
-function loadData() {
+function fetchJSONP(url, timeout) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    s.src = `${url}&callback=${cb}`;
+    const t = setTimeout(() => { cleanup(); reject(new Error('Timeout')); }, timeout || 60000);
+    function cleanup() { clearTimeout(t); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); }
+    window[cb] = function(data) { cleanup(); resolve(data); };
+    s.onerror = () => { cleanup(); reject(new Error('Load error')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function loadData() {
   showL(true); hideErr(); setSpin(true);
-  const cb = 'cb_' + Math.random().toString(36).slice(2);
-  const s = document.createElement('script');
-  s.src = `${GAS_URL}?callback=${cb}`;
-  const t = setTimeout(() => { cleanup(); showL(false); showErr('데이터 로드 실패: Timeout'); setSpin(false); }, 60000);
-  function cleanup() { clearTimeout(t); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); }
-  window[cb] = function(data) {
-    cleanup();
-    if (data.error) { showL(false); showErr('오류: ' + data.error); setSpin(false); return; }
-    render(data);
+  try {
+    // 1차: 메인 데이터 (빠름)
+    document.getElementById('lsub').textContent = '메인 데이터 로딩 중...';
+    const main = await fetchJSONP(`${GAS_URL}?type=main`, 60000);
+    if (main.error) throw new Error(main.error);
+    render(main);
     showL(false); setSpin(false);
-  };
-  s.onerror = () => { cleanup(); showL(false); showErr('데이터 로드 실패'); setSpin(false); };
-  document.head.appendChild(s);
+
+    // 2차: 일별 데이터 (느림 - 백그라운드)
+    document.getElementById('fcDailyChart') && showDailyLoading(true);
+    try {
+      const daily = await fetchJSONP(`${GAS_URL}?type=daily`, 120000);
+      if (!daily.error && daily.dailyStats) {
+        globalData.dailyStats = daily.dailyStats;
+        updateDailyChart('fc', globalData);
+        updateDailyChart('inf', globalData);
+      }
+    } catch(e) {
+      console.warn('일별 데이터 로드 실패:', e);
+    }
+    showDailyLoading(false);
+  } catch(e) {
+    showL(false); setSpin(false);
+    showErr('데이터 로드 실패: ' + e.message);
+  }
+}
+
+function showDailyLoading(v) {
+  ['fcDailyChart','infDailyChart'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.opacity = v ? '0.3' : '1';
+  });
 }
 
 function render(D) {
@@ -295,7 +328,6 @@ function render(D) {
   document.getElementById('kpiRate').textContent = (rate*100).toFixed(1) + '%';
 
   document.getElementById('periodEnd').textContent = D.updatedAt;
-  renderDaily(D);
   renderEntity(D);
   renderDow(D);
   renderCourses(D);
