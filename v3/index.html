@@ -197,7 +197,7 @@
   </div>
 </div>
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbx1LmLPEe_jggiklezs_uM77c9bumZxgeds7p-MwPVN51KLGJ3_yUP0isO8TBICd1vE/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqek9T8tSTe6jw4aCuYYhqLi24dD9IUUJ-vB9UfiwOmsQKCE-0paDInTAysJGVJ6Q5/exec';
 const VALID_CORPS = ['5minlab','Dreamotion','Flyway Games','JOFSOFT','KRAFTON HQ','Loonshot Games','OVERDARE','Olivetree Games','Omni Craftlabs','PUBG STUDIOS','ReLU Games','Rising Wings','bluehole studio','inZOI studio','기타(해외파견)'];
 const DOW_ORDER = ['일','월','화','수','목','금','토'];
 const CAT_COLORS = ['#f59e0b','#fb923c','#f87171','#a78bfa','#60a5fa','#34d399','#4ade80','#facc15','#e879f9','#38bdf8'];
@@ -318,11 +318,8 @@ function build(fast,inf,hr,fcDayRaw,infDayRaw,fcDeptRaw,infDeptRaw){
   const infDow=parseDow(infDayRaw);
 
   // ✅ 인기 강좌 TOP 10 — 원본 시트에서 직접 집계
-  function topCourses(arr){
+  function topCourses(arr, nameKey){
     if(!arr.length) return [];
-    // 강의명 컬럼 찾기
-    const keys=Object.keys(arr[0]);
-    const nameKey=keys.find(k=>k.includes('강의명')||k.includes('강좌명')||k==='course_name')||keys[3];
     const map={};
     arr.filter(isActive).forEach(r=>{
       const name=String(r[nameKey]||'').trim();
@@ -331,8 +328,9 @@ function build(fast,inf,hr,fcDayRaw,infDayRaw,fcDeptRaw,infDeptRaw){
     });
     return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([name,users])=>({name,users}));
   }
-  const fcCourses=topCourses(fast);
-  const infCourses=topCourses(inf);
+  // 패스트캠퍼스: course_name, 인프런: 강의명
+  const fcCourses=topCourses(fast, 'course_name');
+  const infCourses=topCourses(inf, '강의명');
 
   // ✅ 본부별: B열(본부구분), C열(학습시간) 기준
   function parseDept(rows){
