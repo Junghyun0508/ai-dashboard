@@ -197,7 +197,7 @@
   </div>
 </div>
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzX8F4ECqn6DPh8yJHDQcJ9AhFmH75GtzjgzzOqbpRSfrL-lSQadVuekR-UC0Lz93vS/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx1LmLPEe_jggiklezs_uM77c9bumZxgeds7p-MwPVN51KLGJ3_yUP0isO8TBICd1vE/exec';
 const VALID_CORPS = ['5minlab','Dreamotion','Flyway Games','JOFSOFT','KRAFTON HQ','Loonshot Games','OVERDARE','Olivetree Games','Omni Craftlabs','PUBG STUDIOS','ReLU Games','Rising Wings','bluehole studio','inZOI studio','기타(해외파견)'];
 const DOW_ORDER = ['일','월','화','수','목','금','토'];
 const CAT_COLORS = ['#f59e0b','#fb923c','#f87171','#a78bfa','#60a5fa','#34d399','#4ade80','#facc15','#e879f9','#38bdf8'];
@@ -227,12 +227,13 @@ async function loadData(){
     const inf=await fetchSheet('인프런');
     document.getElementById('lsub').textContent='인사정보 로딩...';
     const hr=await fetchSheet('인사정보');
-    document.getElementById('lsub').textContent='피벗 데이터 로딩...';
-    const fcPiv=await fetchSheet('F_피벗(요일)');
-    const infPiv=await fetchSheet('I_피벗(요일)');
+    document.getElementById('lsub').textContent='요일별 데이터 로딩...';
+    const fcDayRaw=await fetchSheet('F_피벗(요일)');
+    const infDayRaw=await fetchSheet('I_피벗(요일)');
+    document.getElementById('lsub').textContent='본부별 데이터 로딩...';
     const fcDeptRaw=await fetchSheet('F-피벗(본부)');
     const infDeptRaw=await fetchSheet('I_피벗(본부)');
-    DATA=build(fast,inf,hr,fcPiv,infPiv,fcDeptRaw,infDeptRaw);
+    DATA=build(fast,inf,hr,fcDayRaw,infDayRaw,fcDeptRaw,infDeptRaw);
     render();
     showL(false);
   }catch(e){
@@ -252,7 +253,7 @@ function canonicalCorp(raw){
 function normalizeId(e){return e?String(e).split('@')[0].toLowerCase().trim():null;}
 function isActive(r){return r['활성여부(최초1회)']==1||String(r['활성여부(최초1회)']).trim()==='TRUE';}
 
-function build(fast,inf,hr,fcPiv,infPiv,fcDeptRaw,infDeptRaw){
+function build(fast,inf,hr,fcDayRaw,infDayRaw,fcDeptRaw,infDeptRaw){
   function toMonth(v){if(!v)return null;const d=new Date(v);return isNaN(d)?null:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
   fast.forEach(r=>{r._month=toMonth(r['접속년월']);});
   inf.forEach(r=>{r._month=toMonth(r['접속년월']||r['학습시작 일자']);});
@@ -283,7 +284,7 @@ function build(fast,inf,hr,fcPiv,infPiv,fcDeptRaw,infDeptRaw){
   }
   const fcCE=corpEnrolled(fast),infCE=corpEnrolled(inf);
 
-  // 월별
+  // 월별 학습시간
   function monthAgg(arr){const m={};arr.forEach(r=>{if(r._month)m[r._month]=(m[r._month]||0)+(parseFloat(r['학습시간(H)'])||0);});return m;}
   const fcMH=monthAgg(fast),infMH=monthAgg(inf);
   const months=[...new Set([...Object.keys(fcMH),...Object.keys(infMH)])].sort();
@@ -293,47 +294,64 @@ function build(fast,inf,hr,fcPiv,infPiv,fcDeptRaw,infDeptRaw){
   const infAS=new Set(inf.filter(isActive).map(r=>normalizeId(r['메일주소'])||r['사번']).filter(Boolean));
   const merged=new Set([...fcAS,...infAS]);
 
-  // 요일별 - F_피벗(요일) 컬럼5(행레이블), 컬럼6(학습시간)
-  const fcDow={},infDow={};
-  fcPiv.forEach(r=>{
-    const keys=Object.keys(r);
-    const day=String(r[keys[5]]||'').trim();
-    const h=parseFloat(r[keys[6]])||0;
-    if(DOW_ORDER.includes(day))fcDow[day]=h;
-  });
-  infPiv.forEach(r=>{
-    const keys=Object.keys(r);
-    const day=String(r[keys[4]]||'').trim();
-    const h=parseFloat(r[keys[5]])||0;
-    if(DOW_ORDER.includes(day))infDow[day]=h;
-  });
-
-  // 인기 강좌
-  function parseCourses(rows){
-    const nameKey=Object.keys(rows[0]||{})[0];
-    const userKey=Object.keys(rows[0]||{})[1];
-    const hourKey=Object.keys(rows[0]||{})[2];
-    return rows
-      .map(r=>({name:String(r[nameKey]||'').trim(),users:parseFloat(r[userKey])||0,hours:parseFloat(r[hourKey])||0}))
-      .filter(r=>r.name&&r.name!=='총합계'&&r.name!=='행 레이블'&&r.users>0)
-      .sort((a,b)=>b.users-a.users).slice(0,10);
+  // ✅ 요일별: 참조요일 키로 요일 찾고, 학습시간 키로 시간 찾기
+  function parseDow(rows){
+    const result={};
+    rows.forEach(r=>{
+      const keys=Object.keys(r);
+      let day=null, hours=0;
+      // 요일 값 찾기 (일/월/화/수/목/금/토 중 하나)
+      keys.forEach(k=>{
+        const v=String(r[k]||'').trim();
+        if(DOW_ORDER.includes(v)) day=v;
+      });
+      // 학습시간: 1보다 큰 숫자값 (비율값 0.xx 제외)
+      keys.forEach(k=>{
+        const v=parseFloat(r[k]);
+        if(!isNaN(v)&&v>1) hours=v;
+      });
+      if(day&&hours>0) result[day]=hours;
+    });
+    return result;
   }
-  const fcCourses=parseCourses(fcPiv);
-  const infCourses=parseCourses(infPiv);
+  const fcDow=parseDow(fcDayRaw);
+  const infDow=parseDow(infDayRaw);
 
-  // 본부별
+  // ✅ 인기 강좌 TOP 10 — 원본 시트에서 직접 집계
+  function topCourses(arr){
+    if(!arr.length) return [];
+    // 강의명 컬럼 찾기
+    const keys=Object.keys(arr[0]);
+    const nameKey=keys.find(k=>k.includes('강의명')||k.includes('강좌명')||k==='course_name')||keys[3];
+    const map={};
+    arr.filter(isActive).forEach(r=>{
+      const name=String(r[nameKey]||'').trim();
+      if(!name||name==='null'||name==='-') return;
+      map[name]=(map[name]||0)+1;
+    });
+    return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([name,users])=>({name,users}));
+  }
+  const fcCourses=topCourses(fast);
+  const infCourses=topCourses(inf);
+
+  // ✅ 본부별: B열(본부구분), C열(학습시간) 기준
   function parseDept(rows){
     const m={};
     rows.forEach(r=>{
       const keys=Object.keys(r);
-      const name=String(r[keys[0]]||'').trim();
-      const h=parseFloat(r[keys[1]])||0;
-      if(name&&name!=='행 레이블'&&name!=='KRAFTON HQ'&&name!=='PUBG STUDIOS'&&!name.match(/^\d+$/)&&h>0)
-        m[name]=(m[name]||0)+h;
+      // 본부구분 키 찾기
+      const deptKey=keys.find(k=>String(k).includes('본부구분'))||keys[1];
+      // 학습시간 키 찾기
+      const hoursKey=keys.find(k=>String(k).includes('학습시간'))||keys[2];
+      const name=String(r[deptKey]||'').trim();
+      const h=parseFloat(r[hoursKey])||0;
+      if(!name||name.includes('총계')||name.includes('법인구분')||name.includes('본부구분')||h<=0) return;
+      m[name]=(m[name]||0)+h;
     });
     return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10);
   }
-  const fcDept=parseDept(fcDeptRaw),infDept=parseDept(infDeptRaw);
+  const fcDept=parseDept(fcDeptRaw);
+  const infDept=parseDept(infDeptRaw);
 
   // 카테고리
   const catMap={};
@@ -358,7 +376,7 @@ function render(){
   document.getElementById('kpiTotal').textContent=D.grandTotal.toLocaleString();
   document.getElementById('kpiTotalSub').textContent=`${Object.keys(D.corpTotalMap).length}개 법인`;
   document.getElementById('kpiEnrolled').textContent=D.merged.size.toLocaleString();
-  document.getElementById('kpiEnrolledSub').textContent=`전체 대비 <b>${(rate*100).toFixed(1)}%</b>`;
+  document.getElementById('kpiEnrolledSub').innerHTML=`전체 대비 <b>${(rate*100).toFixed(1)}%</b>`;
   document.getElementById('kpiHours').textContent=Math.round(D.fcTH+D.infTH).toLocaleString()+'H';
   document.getElementById('kpiHoursSub').textContent=`패스트캠퍼스 ${Math.round(D.fcTH).toLocaleString()}H + 인프런 ${Math.round(D.infTH).toLocaleString()}H`;
   document.getElementById('kpiRate').textContent=(rate*100).toFixed(1)+'%';
@@ -371,9 +389,9 @@ function renderMonthly(){
   chartMonthly=new Chart(document.getElementById('monthlyChart'),{
     type:'bar',
     data:{labels:D.months,datasets:[
-      {label:'패스트캠퍼스',data:D.months.map(m=>D.fcMH[m]||0),backgroundColor:'rgba(245,158,11,0.7)',borderColor:'#f59e0b',borderWidth:1,borderRadius:5,order:1},
-      {label:'인프런',data:D.months.map(m=>D.infMH[m]||0),backgroundColor:'rgba(16,185,129,0.7)',borderColor:'#10b981',borderWidth:1,borderRadius:5,order:2},
-      {label:'합계',data:D.months.map(m=>(D.fcMH[m]||0)+(D.infMH[m]||0)),type:'line',borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.08)',borderWidth:2,pointBackgroundColor:'#60a5fa',pointRadius:4,tension:0.4,fill:true,order:0}
+      {label:'패스트캠퍼스',data:D.months.map(m=>+(D.fcMH[m]||0).toFixed(1)),backgroundColor:'rgba(245,158,11,0.7)',borderColor:'#f59e0b',borderWidth:1,borderRadius:5,order:1},
+      {label:'인프런',data:D.months.map(m=>+(D.infMH[m]||0).toFixed(1)),backgroundColor:'rgba(16,185,129,0.7)',borderColor:'#10b981',borderWidth:1,borderRadius:5,order:2},
+      {label:'합계',data:D.months.map(m=>+((D.fcMH[m]||0)+(D.infMH[m]||0)).toFixed(1)),type:'line',borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.08)',borderWidth:2,pointBackgroundColor:'#60a5fa',pointRadius:4,tension:0.4,fill:true,order:0}
     ]},
     options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a2235',borderColor:'rgba(99,179,237,0.2)',borderWidth:1,callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}H`}}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(99,179,237,0.07)'},ticks:{callback:v=>v+'H'}}},interaction:{mode:'index',intersect:false}}
   });
@@ -389,8 +407,8 @@ function renderEntity(){
   let sumT=0,sumE=0;
   VALID_CORPS.filter(c=>D.corpTotalMap[c]||D.fcCE[c]||D.infCE[c]).forEach(c=>{
     const tot=D.corpTotalMap[c]||0;
-    const merged=new Set([...(D.fcCE[c]||new Set()),...(D.infCE[c]||new Set())]);
-    const enr=merged.size;
+    const mergedSet=new Set([...(D.fcCE[c]||new Set()),...(D.infCE[c]||new Set())]);
+    const enr=mergedSet.size;
     sumT+=tot;sumE+=enr;
     const rate=tot>0?enr/tot:0;
     let fill='linear-gradient(90deg,#3b82f6,#06b6d4)';
@@ -475,7 +493,8 @@ function renderSummary(){
     document.getElementById('pillINFCourse').textContent=n.length>12?n.slice(0,12)+'…':n;
     document.getElementById('pillINFCourseSub').textContent=D.infCourses[0].users+'명 수강';
   }
-  const fData=D.months.map(m=>D.fcMH[m]||0),iData=D.months.map(m=>D.infMH[m]||0);
+  const fData=D.months.map(m=>+(D.fcMH[m]||0).toFixed(1));
+  const iData=D.months.map(m=>+(D.infMH[m]||0).toFixed(1));
   const maxF=Math.max(...fData,1),maxI=Math.max(...iData,1);
   if(chartFCBar)chartFCBar.destroy();
   chartFCBar=new Chart(document.getElementById('fcMonthlyBar'),{type:'bar',data:{labels:D.months,datasets:[{data:fData,backgroundColor:fData.map(v=>v===maxF?'#f59e0b':'rgba(245,158,11,0.35)'),borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toFixed(1)}H`}}},scales:{x:{grid:{display:false}},y:{display:false}}}});
