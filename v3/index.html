@@ -294,28 +294,51 @@ function build(fast,inf,hr,fcDayRaw,infDayRaw,fcDeptRaw,infDeptRaw){
   const infAS=new Set(inf.filter(isActive).map(r=>normalizeId(r['메일주소'])||r['사번']).filter(Boolean));
   const merged=new Set([...fcAS,...infAS]);
 
-  // ✅ 요일별: 참조요일 키로 요일 찾고, 학습시간 키로 시간 찾기
-  function parseDow(rows){
+  // ✅ 요일별: 피벗 시트에서 정확히 읽기
+  // F_피벗(요일): 헤더행 자체가 첫 요일(일)이라 헤더+데이터 합쳐서 처리
+  function parseFCDow(rows){
     const result={};
+    if(!rows.length) return result;
+    // GAS가 3행을 헤더로 읽으므로 헤더의 키 이름이 실제 요일값
+    // 예: {'일': 195.83, ...} 형태로 첫 번째 row가 없고 헤더 자체가 일=195.83
+    // F열(index5)=요일, G열(index6)=학습시간 → GAS 키: 첫번째 요일이 헤더명
+    // rows 구조: [{일: 195.83}, {일: '월', 195.83: 658.1}, ...]
+    // 실제로는 헤더가 '일'=요일명, 값=학습시간H
+    // 헤더 키 자체가 '일'이고 값이 195.83 → 직접 추출
+    const keys = Object.keys(rows[0]||{});
+    // F열에 해당하는 키(요일값) 찾기: DOW_ORDER에 있는 키
+    const dayKey = keys.find(k => DOW_ORDER.includes(String(k).trim()));
+    const hourKey = keys[keys.indexOf(dayKey)+1];
+    // 헤더 자체(첫 요일)
+    if(dayKey) result[dayKey] = parseFloat(rows[0][hourKey])||0;
+    // 나머지 행
     rows.forEach(r=>{
-      const keys=Object.keys(r);
-      let day=null, hours=0;
-      // 요일 값 찾기 (일/월/화/수/목/금/토 중 하나)
-      keys.forEach(k=>{
-        const v=String(r[k]||'').trim();
-        if(DOW_ORDER.includes(v)) day=v;
-      });
-      // 학습시간: 1보다 큰 숫자값 (비율값 0.xx 제외)
-      keys.forEach(k=>{
-        const v=parseFloat(r[k]);
-        if(!isNaN(v)&&v>1) hours=v;
-      });
-      if(day&&hours>0) result[day]=hours;
+      const day=String(r[dayKey]||'').trim();
+      const h=parseFloat(r[hourKey])||0;
+      if(DOW_ORDER.includes(day)) result[day]=(result[day]||0)+h;
     });
     return result;
   }
-  const fcDow=parseDow(fcDayRaw);
-  const infDow=parseDow(infDayRaw);
+
+  // I_피벗(요일): 헤더가 '행 레이블.1', '합계 : 학습시간(H).1'
+  function parseINFDow(rows){
+    const result={};
+    if(!rows.length) return result;
+    const keys = Object.keys(rows[0]||{});
+    // '행 레이블' 포함 키 찾기
+    const dayKey = keys.find(k => String(k).includes('행 레이블'));
+    const hourKey = keys.find(k => String(k).includes('학습시간'));
+    if(!dayKey||!hourKey) return result;
+    rows.forEach(r=>{
+      const day=String(r[dayKey]||'').trim();
+      const h=parseFloat(r[hourKey])||0;
+      if(DOW_ORDER.includes(day)) result[day]=h;
+    });
+    return result;
+  }
+
+  const fcDow=parseFCDow(fcDayRaw);
+  const infDow=parseINFDow(infDayRaw);
 
   // ✅ 인기 강좌 TOP 10 — 원본 시트에서 직접 집계
   function topCourses(arr, nameKey){
