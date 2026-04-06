@@ -134,7 +134,11 @@
   <div class="card" style="margin-bottom:24px">
     <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:12px;">
       <span>월별 학습시간 추이 (2025.09 ~ 현재)</span>
-      <div style="display:flex;gap:16px;font-size:12px;" id="monthLegend"></div>
+      <div style="display:flex;gap:16px;font-size:12px;">
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:var(--fc-color);display:inline-block"></span>패스트캠퍼스</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:var(--inf-color);display:inline-block"></span>인프런</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:var(--highlight);display:inline-block"></span>합계</span>
+      </div>
     </div>
     <canvas id="monthlyChart" height="90"></canvas>
   </div>
@@ -197,336 +201,205 @@
   </div>
 </div>
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqek9T8tSTe6jw4aCuYYhqLi24dD9IUUJ-vB9UfiwOmsQKCE-0paDInTAysJGVJ6Q5/exec';
-const VALID_CORPS = ['5minlab','Dreamotion','Flyway Games','JOFSOFT','KRAFTON HQ','Loonshot Games','OVERDARE','Olivetree Games','Omni Craftlabs','PUBG STUDIOS','ReLU Games','Rising Wings','bluehole studio','inZOI studio','기타(해외파견)'];
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwJO_cdh6oeMDYGHxBKLRtNBtxklhbq2hqwbLstrCtsG0YeZEGIHQ2cySm5N248vfd7/exec';
 const DOW_ORDER = ['일','월','화','수','목','금','토'];
 const CAT_COLORS = ['#f59e0b','#fb923c','#f87171','#a78bfa','#60a5fa','#34d399','#4ade80','#facc15','#e879f9','#38bdf8'];
-let DATA=null, chartMonthly=null, chartDept=null, chartFCBar=null, chartINFBar=null;
-Chart.defaults.color='#64748b'; Chart.defaults.borderColor='rgba(99,179,237,0.1)';
-Chart.defaults.font.family="'Space Mono','Noto Sans KR',sans-serif"; Chart.defaults.font.size=11;
+let chartMonthly=null, chartDept=null, chartFCBar=null, chartINFBar=null;
 
-function fetchSheet(name){
-  return new Promise((resolve,reject)=>{
-    const cb='cb_'+Math.random().toString(36).slice(2);
-    const url=`${GAS_URL}?sheet=${encodeURIComponent(name)}&callback=${cb}`;
-    const s=document.createElement('script'); s.src=url;
-    const t=setTimeout(()=>{cleanup();reject(new Error('Timeout: '+name));},30000);
-    function cleanup(){clearTimeout(t);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
-    window[cb]=function(data){cleanup();if(data&&data.error){reject(new Error(data.error));return;}resolve(Array.isArray(data)?data.filter(r=>r&&typeof r==='object'):[]);};
-    s.onerror=()=>{cleanup();reject(new Error('Load error: '+name));};
-    document.head.appendChild(s);
+Chart.defaults.color='#64748b';
+Chart.defaults.borderColor='rgba(99,179,237,0.1)';
+Chart.defaults.font.family="'Space Mono','Noto Sans KR',sans-serif";
+Chart.defaults.font.size=11;
+
+function loadData() {
+  showL(true); hideErr(); setSpin(true);
+  const cb = 'cb_' + Math.random().toString(36).slice(2);
+  const s = document.createElement('script');
+  s.src = `${GAS_URL}?callback=${cb}`;
+  const t = setTimeout(() => { cleanup(); showL(false); showErr('데이터 로드 실패: Timeout'); setSpin(false); }, 60000);
+  function cleanup() { clearTimeout(t); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); }
+  window[cb] = function(data) {
+    cleanup();
+    if (data.error) { showL(false); showErr('오류: ' + data.error); setSpin(false); return; }
+    render(data);
+    showL(false); setSpin(false);
+  };
+  s.onerror = () => { cleanup(); showL(false); showErr('데이터 로드 실패'); setSpin(false); };
+  document.head.appendChild(s);
+}
+
+function render(D) {
+  // 헤더
+  document.getElementById('updateDate').textContent = D.updatedAt;
+
+  // KPI
+  const rate = D.totalHeadcount > 0 ? D.mergedUsers / D.totalHeadcount : 0;
+  document.getElementById('kpiTotal').textContent = D.totalHeadcount.toLocaleString();
+  document.getElementById('kpiTotalSub').textContent = '국내 재직 구성원';
+  document.getElementById('kpiEnrolled').textContent = D.mergedUsers.toLocaleString();
+  document.getElementById('kpiEnrolledSub').innerHTML = `전체 대비 <b>${(rate*100).toFixed(1)}%</b>`;
+  const totalH = D.fcTotalHours + D.infTotalHours;
+  document.getElementById('kpiHours').textContent = Math.round(totalH).toLocaleString() + 'H';
+  document.getElementById('kpiHoursSub').textContent = `패스트캠퍼스 ${Math.round(D.fcTotalHours).toLocaleString()}H + 인프런 ${Math.round(D.infTotalHours).toLocaleString()}H`;
+  document.getElementById('kpiRate').textContent = (rate*100).toFixed(1) + '%';
+
+  renderMonthly(D);
+  renderEntity(D);
+  renderDow(D);
+  renderCourses(D);
+  renderCats(D);
+  renderDept(D);
+  renderSummary(D);
+}
+
+function renderMonthly(D) {
+  if (chartMonthly) chartMonthly.destroy();
+  const labels = D.monthlyStats.months.map(m => {
+    const [y, mo] = m.split('-');
+    return `${mo}월`;
   });
-}
-
-async function loadData(){
-  showL(true);hideErr();setSpin(true);
-  try{
-    document.getElementById('lsub').textContent='패스트캠퍼스 로딩...';
-    const fast=await fetchSheet('패스트캠퍼스');
-    document.getElementById('lsub').textContent='인프런 로딩...';
-    const inf=await fetchSheet('인프런');
-    document.getElementById('lsub').textContent='인사정보 로딩...';
-    const hr=await fetchSheet('인사정보');
-    document.getElementById('lsub').textContent='요일별 데이터 로딩...';
-    const fcDayRaw=await fetchSheet('F_피벗(요일)');
-    const infDayRaw=await fetchSheet('I_피벗(요일)');
-    document.getElementById('lsub').textContent='본부별 데이터 로딩...';
-    const fcDeptRaw=await fetchSheet('F-피벗(본부)');
-    const infDeptRaw=await fetchSheet('I_피벗(본부)');
-    DATA=build(fast,inf,hr,fcDayRaw,infDayRaw,fcDeptRaw,infDeptRaw);
-    render();
-    showL(false);
-  }catch(e){
-    showL(false);
-    showErr('데이터 로드 실패: '+e.message);
-    console.error(e);
-  }
-  setSpin(false);
-}
-
-function canonicalCorp(raw){
-  if(!raw)return null;
-  const s=String(raw).replace(/[\u200b-\u200d\ufeff\u00ad]/g,'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
-  if(VALID_CORPS.includes(s))return s;
-  return VALID_CORPS.find(c=>c.toLowerCase()===s.toLowerCase())||null;
-}
-function normalizeId(e){return e?String(e).split('@')[0].toLowerCase().trim():null;}
-function isActive(r){return r['활성여부(최초1회)']==1||String(r['활성여부(최초1회)']).trim()==='TRUE';}
-
-function build(fast,inf,hr,fcDayRaw,infDayRaw,fcDeptRaw,infDeptRaw){
-  function toMonth(v){if(!v)return null;const d=new Date(v);return isNaN(d)?null:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
-  fast.forEach(r=>{r._month=toMonth(r['접속년월']);});
-  inf.forEach(r=>{r._month=toMonth(r['접속년월']||r['학습시작 일자']);});
-
-  let maxDate=null;
-  [...fast,...inf].forEach(r=>{const d=new Date(r['접속년월']||r['학습시작 일자']);if(!isNaN(d)&&(!maxDate||d>maxDate))maxDate=d;});
-  const updateStr=maxDate?`${maxDate.getFullYear()}-${String(maxDate.getMonth()+1).padStart(2,'0')}-${String(maxDate.getDate()).padStart(2,'0')}`:'—';
-
-  // 총원
-  const corpTotalMap={};let grandTotal=0;
-  hr.forEach(r=>{
-    const flag=String(r['대상여부']||'').trim();
-    if(flag==='TRUE'||flag==='1'||flag==='true'){
-      grandTotal++;
-      const c=canonicalCorp(r['법인구분']);
-      if(c)corpTotalMap[c]=(corpTotalMap[c]||0)+1;
-    }
-  });
-
-  // 법인별 수강인원
-  function corpEnrolled(arr){
-    const m={};
-    arr.filter(isActive).forEach(r=>{
-      const c=canonicalCorp(r['법인구분']),u=normalizeId(r['메일주소'])||r['사번'];
-      if(c&&u){if(!m[c])m[c]=new Set();m[c].add(u);}
-    });
-    return m;
-  }
-  const fcCE=corpEnrolled(fast),infCE=corpEnrolled(inf);
-
-  // 월별 학습시간
-  function monthAgg(arr){const m={};arr.forEach(r=>{if(r._month)m[r._month]=(m[r._month]||0)+(parseFloat(r['학습시간(H)'])||0);});return m;}
-  const fcMH=monthAgg(fast),infMH=monthAgg(inf);
-  const months=[...new Set([...Object.keys(fcMH),...Object.keys(infMH)])].sort();
-  const fcTH=Object.values(fcMH).reduce((s,v)=>s+v,0);
-  const infTH=Object.values(infMH).reduce((s,v)=>s+v,0);
-  const fcAS=new Set(fast.filter(isActive).map(r=>normalizeId(r['메일주소'])||r['사번']).filter(Boolean));
-  const infAS=new Set(inf.filter(isActive).map(r=>normalizeId(r['메일주소'])||r['사번']).filter(Boolean));
-  const merged=new Set([...fcAS,...infAS]);
-
-  // ✅ 요일별: 피벗 시트에서 정확히 읽기
-  // F_피벗(요일): 헤더행 자체가 첫 요일(일)이라 헤더+데이터 합쳐서 처리
-  function parseFCDow(rows){
-    const result={};
-    if(!rows.length) return result;
-    // GAS가 3행을 헤더로 읽으므로 헤더의 키 이름이 실제 요일값
-    // 예: {'일': 195.83, ...} 형태로 첫 번째 row가 없고 헤더 자체가 일=195.83
-    // F열(index5)=요일, G열(index6)=학습시간 → GAS 키: 첫번째 요일이 헤더명
-    // rows 구조: [{일: 195.83}, {일: '월', 195.83: 658.1}, ...]
-    // 실제로는 헤더가 '일'=요일명, 값=학습시간H
-    // 헤더 키 자체가 '일'이고 값이 195.83 → 직접 추출
-    const keys = Object.keys(rows[0]||{});
-    // F열에 해당하는 키(요일값) 찾기: DOW_ORDER에 있는 키
-    const dayKey = keys.find(k => DOW_ORDER.includes(String(k).trim()));
-    const hourKey = keys[keys.indexOf(dayKey)+1];
-    // 헤더 자체(첫 요일)
-    if(dayKey) result[dayKey] = parseFloat(rows[0][hourKey])||0;
-    // 나머지 행
-    rows.forEach(r=>{
-      const day=String(r[dayKey]||'').trim();
-      const h=parseFloat(r[hourKey])||0;
-      if(DOW_ORDER.includes(day)) result[day]=(result[day]||0)+h;
-    });
-    return result;
-  }
-
-  // I_피벗(요일): 헤더가 '행 레이블.1', '합계 : 학습시간(H).1'
-  function parseINFDow(rows){
-    const result={};
-    if(!rows.length) return result;
-    const keys = Object.keys(rows[0]||{});
-    // '행 레이블' 포함 키 찾기
-    const dayKey = keys.find(k => String(k).includes('행 레이블'));
-    const hourKey = keys.find(k => String(k).includes('학습시간'));
-    if(!dayKey||!hourKey) return result;
-    rows.forEach(r=>{
-      const day=String(r[dayKey]||'').trim();
-      const h=parseFloat(r[hourKey])||0;
-      if(DOW_ORDER.includes(day)) result[day]=h;
-    });
-    return result;
-  }
-
-  const fcDow=parseFCDow(fcDayRaw);
-  const infDow=parseINFDow(infDayRaw);
-
-  // ✅ 인기 강좌 TOP 10 — 원본 시트에서 직접 집계
-  function topCourses(arr, nameKey){
-    if(!arr.length) return [];
-    const map={};
-    arr.filter(isActive).forEach(r=>{
-      const name=String(r[nameKey]||'').trim();
-      if(!name||name==='null'||name==='-') return;
-      map[name]=(map[name]||0)+1;
-    });
-    return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([name,users])=>({name,users}));
-  }
-  // 패스트캠퍼스: course_name, 인프런: 강의명
-  const fcCourses=topCourses(fast, 'course_name');
-  const infCourses=topCourses(inf, '강의명');
-
-  // ✅ 본부별: B열(본부구분), C열(학습시간) 기준
-  function parseDept(rows){
-    const m={};
-    rows.forEach(r=>{
-      const keys=Object.keys(r);
-      // 본부구분 키 찾기
-      const deptKey=keys.find(k=>String(k).includes('본부구분'))||keys[1];
-      // 학습시간 키 찾기
-      const hoursKey=keys.find(k=>String(k).includes('학습시간'))||keys[2];
-      const name=String(r[deptKey]||'').trim();
-      const h=parseFloat(r[hoursKey])||0;
-      if(!name||name.includes('총계')||name.includes('법인구분')||name.includes('본부구분')||h<=0) return;
-      m[name]=(m[name]||0)+h;
-    });
-    return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  }
-  const fcDept=parseDept(fcDeptRaw);
-  const infDept=parseDept(infDeptRaw);
-
-  // 카테고리
-  const catMap={};
-  fast.forEach(r=>{
-    const cat=r['managedCat1'];
-    if(cat&&cat!=='null'&&isActive(r)){
-      if(!catMap[cat])catMap[cat]=new Set();
-      const u=normalizeId(r['메일주소'])||r['사번'];
-      if(u)catMap[cat].add(u);
-    }
-  });
-  const fcCats=Object.entries(catMap).map(([n,s])=>[n,s.size]).sort((a,b)=>b[1]-a[1]).slice(0,10);
-
-  return{updateStr,grandTotal,corpTotalMap,fcCE,infCE,fcMH,infMH,months,fcTH,infTH,fcAS,infAS,merged,fcDow,infDow,fcCourses,infCourses,fcDept,infDept,fcCats};
-}
-
-function render(){
-  if(!DATA)return;
-  const D=DATA;
-  document.getElementById('updateDate').textContent=D.updateStr;
-  const rate=D.grandTotal>0?D.merged.size/D.grandTotal:0;
-  document.getElementById('kpiTotal').textContent=D.grandTotal.toLocaleString();
-  document.getElementById('kpiTotalSub').textContent=`${Object.keys(D.corpTotalMap).length}개 법인`;
-  document.getElementById('kpiEnrolled').textContent=D.merged.size.toLocaleString();
-  document.getElementById('kpiEnrolledSub').innerHTML=`전체 대비 <b>${(rate*100).toFixed(1)}%</b>`;
-  document.getElementById('kpiHours').textContent=Math.round(D.fcTH+D.infTH).toLocaleString()+'H';
-  document.getElementById('kpiHoursSub').textContent=`패스트캠퍼스 ${Math.round(D.fcTH).toLocaleString()}H + 인프런 ${Math.round(D.infTH).toLocaleString()}H`;
-  document.getElementById('kpiRate').textContent=(rate*100).toFixed(1)+'%';
-  renderMonthly();renderEntity();renderDow();renderCourses();renderCats();renderDept();renderSummary();
-}
-
-function renderMonthly(){
-  const D=DATA;
-  if(chartMonthly)chartMonthly.destroy();
-  chartMonthly=new Chart(document.getElementById('monthlyChart'),{
-    type:'bar',
-    data:{labels:D.months,datasets:[
-      {label:'패스트캠퍼스',data:D.months.map(m=>+(D.fcMH[m]||0).toFixed(1)),backgroundColor:'rgba(245,158,11,0.7)',borderColor:'#f59e0b',borderWidth:1,borderRadius:5,order:1},
-      {label:'인프런',data:D.months.map(m=>+(D.infMH[m]||0).toFixed(1)),backgroundColor:'rgba(16,185,129,0.7)',borderColor:'#10b981',borderWidth:1,borderRadius:5,order:2},
-      {label:'합계',data:D.months.map(m=>+((D.fcMH[m]||0)+(D.infMH[m]||0)).toFixed(1)),type:'line',borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.08)',borderWidth:2,pointBackgroundColor:'#60a5fa',pointRadius:4,tension:0.4,fill:true,order:0}
+  const fcData = D.monthlyStats.fc;
+  const infData = D.monthlyStats.inf;
+  const sumData = fcData.map((v, i) => +(v + infData[i]).toFixed(1));
+  chartMonthly = new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label:'패스트캠퍼스', data:fcData, backgroundColor:'rgba(245,158,11,0.7)', borderColor:'#f59e0b', borderWidth:1, borderRadius:5, order:1 },
+      { label:'인프런', data:infData, backgroundColor:'rgba(16,185,129,0.7)', borderColor:'#10b981', borderWidth:1, borderRadius:5, order:2 },
+      { label:'합계', data:sumData, type:'line', borderColor:'#60a5fa', backgroundColor:'rgba(96,165,250,0.08)', borderWidth:2, pointBackgroundColor:'#60a5fa', pointRadius:4, tension:0.4, fill:true, order:0 }
     ]},
-    options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a2235',borderColor:'rgba(99,179,237,0.2)',borderWidth:1,callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}H`}}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(99,179,237,0.07)'},ticks:{callback:v=>v+'H'}}},interaction:{mode:'index',intersect:false}}
-  });
-  const leg=document.getElementById('monthLegend');leg.innerHTML='';
-  [['패스트캠퍼스','var(--fc-color)'],['인프런','var(--inf-color)'],['합계','var(--highlight)']].forEach(([n,c])=>{
-    leg.innerHTML+=`<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:${c};display:inline-block"></span>${n}</span>`;
+    options: { responsive:true, plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a2235', borderColor:'rgba(99,179,237,0.2)', borderWidth:1, callbacks:{ label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}H` } } }, scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'rgba(99,179,237,0.07)'}, ticks:{callback: v => v+'H'} } }, interaction:{mode:'index',intersect:false} }
   });
 }
 
-function renderEntity(){
-  const D=DATA;
-  const tbody=document.getElementById('entityRows');tbody.innerHTML='';
-  let sumT=0,sumE=0;
-  VALID_CORPS.filter(c=>D.corpTotalMap[c]||D.fcCE[c]||D.infCE[c]).forEach(c=>{
-    const tot=D.corpTotalMap[c]||0;
-    const mergedSet=new Set([...(D.fcCE[c]||new Set()),...(D.infCE[c]||new Set())]);
-    const enr=mergedSet.size;
-    sumT+=tot;sumE+=enr;
-    const rate=tot>0?enr/tot:0;
-    let fill='linear-gradient(90deg,#3b82f6,#06b6d4)';
-    if(rate>0.45)fill='linear-gradient(90deg,#10b981,#34d399)';
-    else if(rate>0.35)fill='linear-gradient(90deg,#f59e0b,#fcd34d)';
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="entity-name">${c}</td><td style="text-align:right;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">${tot.toLocaleString()}</td><td style="text-align:right;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;font-weight:600">${enr.toLocaleString()}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="rate-bar-wrap"><div class="rate-bar"><div class="rate-bar-fill" style="width:${Math.min(rate*100,100).toFixed(1)}%;background:${fill}"></div></div></div><span class="rate-val">${(rate*100).toFixed(1)}%</span></div></td>`;
+function renderEntity(D) {
+  const tbody = document.getElementById('entityRows');
+  tbody.innerHTML = '';
+  let sumT = 0, sumE = 0;
+  D.entityStats.forEach(d => {
+    if (!d.name || d.name === '소속') return;
+    sumT += d.total; sumE += d.users;
+    const rate = d.rate;
+    let fill = 'linear-gradient(90deg,#3b82f6,#06b6d4)';
+    if (rate > 0.45) fill = 'linear-gradient(90deg,#10b981,#34d399)';
+    else if (rate > 0.35) fill = 'linear-gradient(90deg,#f59e0b,#fcd34d)';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="entity-name">${d.name}</td>
+      <td style="text-align:right;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">${d.total.toLocaleString()}</td>
+      <td style="text-align:right;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;font-weight:600">${d.users.toLocaleString()}</td>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div class="rate-bar-wrap"><div class="rate-bar"><div class="rate-bar-fill" style="width:${Math.min(rate*100,100).toFixed(1)}%;background:${fill}"></div></div></div>
+        <span class="rate-val">${(rate*100).toFixed(1)}%</span>
+      </div></td>`;
     tbody.appendChild(tr);
   });
-  const tr=document.createElement('tr');tr.className='total-row';
-  const r=sumT>0?sumE/sumT:0;
-  tr.innerHTML=`<td>합계</td><td style="text-align:right;font-family:'Space Mono',monospace">${sumT.toLocaleString()}</td><td style="text-align:right;font-family:'Space Mono',monospace">${sumE.toLocaleString()}</td><td><span class="rate-val">${(r*100).toFixed(1)}%</span></td>`;
+  const tr = document.createElement('tr'); tr.className = 'total-row';
+  const r = sumT > 0 ? sumE / sumT : 0;
+  tr.innerHTML = `<td>합계</td>
+    <td style="text-align:right;font-family:'Space Mono',monospace">${sumT.toLocaleString()}</td>
+    <td style="text-align:right;font-family:'Space Mono',monospace">${sumE.toLocaleString()}</td>
+    <td><span class="rate-val">${(r*100).toFixed(1)}%</span></td>`;
   tbody.appendChild(tr);
 }
 
-function renderDow(){
-  function draw(id,map,c1,c2){
-    const el=document.getElementById(id);el.innerHTML='';
-    const vals=DOW_ORDER.map(d=>map[d]||0);
-    const max=Math.max(...vals,0.1);
-    DOW_ORDER.forEach((d,i)=>{
-      const h=vals[i],barH=Math.round((h/max)*110);
-      const wrap=document.createElement('div');wrap.className='day-bar-wrap';
-      wrap.innerHTML=`<div class="day-value">${h.toFixed(0)}H</div><div class="day-bar-inner" style="height:${barH}px;background:linear-gradient(180deg,${c1},${c2});opacity:${h===Math.max(...vals)?1:0.65}"></div><div class="day-label">${d}</div>`;
+function renderDow(D) {
+  function draw(id, map, c1, c2) {
+    const el = document.getElementById(id); el.innerHTML = '';
+    const vals = DOW_ORDER.map(d => map[d] || 0);
+    const max = Math.max(...vals, 0.1);
+    DOW_ORDER.forEach((d, i) => {
+      const h = vals[i], barH = Math.round((h / max) * 110);
+      const wrap = document.createElement('div'); wrap.className = 'day-bar-wrap';
+      wrap.innerHTML = `<div class="day-value">${Math.round(h)}H</div>
+        <div class="day-bar-inner" style="height:${barH}px;background:linear-gradient(180deg,${c1},${c2});opacity:${h===Math.max(...vals)?1:0.65}"></div>
+        <div class="day-label">${d}</div>`;
       el.appendChild(wrap);
     });
   }
-  draw('dayBarFC',DATA.fcDow,'#f59e0b','#fb923c');
-  draw('dayBarINF',DATA.infDow,'#10b981','#06b6d4');
+  draw('dayBarFC', D.dowStats.fc, '#f59e0b', '#fb923c');
+  draw('dayBarINF', D.dowStats.inf, '#10b981', '#06b6d4');
 }
 
-function renderCourses(){
-  function draw(id,courses){
-    const el=document.getElementById(id);el.innerHTML='';
-    if(!courses.length){el.innerHTML='<div style="color:var(--muted);padding:12px;font-size:12px">데이터 없음</div>';return;}
-    courses.forEach((r,i)=>{
-      const div=document.createElement('div');div.className='course-item';
-      div.innerHTML=`<div class="${i<3?'course-rank top3':'course-rank'}">${i+1}</div><div class="course-name">${r.name}</div><div class="course-count">${r.users}<span>명</span></div>`;
+function renderCourses(D) {
+  function draw(id, courses) {
+    const el = document.getElementById(id); el.innerHTML = '';
+    if (!courses.length) { el.innerHTML = '<div style="color:var(--muted);padding:12px;font-size:12px">데이터 없음</div>'; return; }
+    courses.forEach((r, i) => {
+      const div = document.createElement('div'); div.className = 'course-item';
+      div.innerHTML = `<div class="${i<3?'course-rank top3':'course-rank'}">${i+1}</div>
+        <div class="course-name">${r.name}</div>
+        <div class="course-count">${r.users}<span>명</span></div>`;
       el.appendChild(div);
     });
   }
-  draw('fcCourses',DATA.fcCourses);
-  draw('infCourses',DATA.infCourses);
+  draw('fcCourses', D.fcTopCourses);
+  draw('infCourses', D.infTopCourses);
 }
 
-function renderCats(){
-  const el=document.getElementById('catFC');el.innerHTML='';
-  const cats=DATA.fcCats;const max=cats[0]?.[1]||1;
-  cats.forEach(([name,cnt],i)=>{
-    const div=document.createElement('div');div.className='cat-item';
-    div.innerHTML=`<div class="cat-name">${name}</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:${(cnt/max*100).toFixed(0)}%;background:${CAT_COLORS[i]}"></div></div><div class="cat-val">${cnt}</div>`;
+function renderCats(D) {
+  const el = document.getElementById('catFC'); el.innerHTML = '';
+  const cats = D.fcCategories;
+  const max = cats[0]?.count || 1;
+  cats.forEach((c, i) => {
+    const div = document.createElement('div'); div.className = 'cat-item';
+    div.innerHTML = `<div class="cat-name">${c.category}</div>
+      <div class="cat-bar-wrap"><div class="cat-bar" style="width:${(c.count/max*100).toFixed(0)}%;background:${CAT_COLORS[i]}"></div></div>
+      <div class="cat-val">${c.count}</div>`;
     el.appendChild(div);
   });
 }
 
-function renderDept(){
-  const D=DATA;
-  const deptMap={};
-  D.fcDept.forEach(([n,h])=>{deptMap[n]={fc:h,inf:0};});
-  D.infDept.forEach(([n,h])=>{if(!deptMap[n])deptMap[n]={fc:0,inf:0};deptMap[n].inf=h;});
-  const sorted=Object.entries(deptMap).sort((a,b)=>(b[1].fc+b[1].inf)-(a[1].fc+a[1].inf)).slice(0,10);
-  const labels=sorted.map(([n])=>n.length>18?n.slice(0,18)+'…':n);
-  if(chartDept)chartDept.destroy();
-  chartDept=new Chart(document.getElementById('deptChart'),{
-    type:'bar',data:{labels,datasets:[
-      {label:'패스트캠퍼스',data:sorted.map(([,v])=>v.fc),backgroundColor:'rgba(245,158,11,0.75)',borderRadius:4,borderSkipped:false},
-      {label:'인프런',data:sorted.map(([,v])=>v.inf),backgroundColor:'rgba(16,185,129,0.75)',borderRadius:4,borderSkipped:false}
+function renderDept(D) {
+  const deptMap = {};
+  D.deptStats.fc.forEach(d => { deptMap[d.dept] = { fc: d.hours, inf: 0 }; });
+  D.deptStats.inf.forEach(d => { if (!deptMap[d.dept]) deptMap[d.dept] = { fc:0, inf:0 }; deptMap[d.dept].inf = d.hours; });
+  const sorted = Object.entries(deptMap).sort((a,b) => (b[1].fc+b[1].inf)-(a[1].fc+a[1].inf)).slice(0,10);
+  const labels = sorted.map(([n]) => n.length > 18 ? n.slice(0,18)+'…' : n);
+  if (chartDept) chartDept.destroy();
+  chartDept = new Chart(document.getElementById('deptChart'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label:'패스트캠퍼스', data:sorted.map(([,v])=>v.fc), backgroundColor:'rgba(245,158,11,0.75)', borderRadius:4, borderSkipped:false },
+      { label:'인프런', data:sorted.map(([,v])=>v.inf), backgroundColor:'rgba(16,185,129,0.75)', borderRadius:4, borderSkipped:false }
     ]},
-    options:{indexAxis:'y',responsive:true,plugins:{legend:{position:'top',labels:{boxWidth:10,padding:12}},tooltip:{backgroundColor:'#1a2235',borderColor:'rgba(99,179,237,0.2)',borderWidth:1}},scales:{x:{stacked:true,grid:{color:'rgba(99,179,237,0.07)'},ticks:{callback:v=>v+'H'}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}}}
+    options: { indexAxis:'y', responsive:true, plugins:{ legend:{position:'top',labels:{boxWidth:10,padding:12}}, tooltip:{backgroundColor:'#1a2235',borderColor:'rgba(99,179,237,0.2)',borderWidth:1} }, scales:{ x:{stacked:true,grid:{color:'rgba(99,179,237,0.07)'},ticks:{callback:v=>v+'H'}}, y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}} } }
   });
 }
 
-function renderSummary(){
-  const D=DATA;
-  document.getElementById('pillFCH').textContent=Math.round(D.fcTH).toLocaleString()+'H';
-  document.getElementById('pillFCU').textContent=D.fcAS.size.toLocaleString()+'명';
-  document.getElementById('pillINFH').textContent=Math.round(D.infTH).toLocaleString()+'H';
-  document.getElementById('pillINFU').textContent=D.infAS.size.toLocaleString()+'명';
-  if(D.fcCats.length){document.getElementById('pillFCCat').textContent=D.fcCats[0][0];document.getElementById('pillFCCatSub').textContent=D.fcCats[0][1]+'명 수강';}
-  if(D.infCourses.length){
-    const n=D.infCourses[0].name;
-    document.getElementById('pillINFCourse').textContent=n.length>12?n.slice(0,12)+'…':n;
-    document.getElementById('pillINFCourseSub').textContent=D.infCourses[0].users+'명 수강';
+function renderSummary(D) {
+  document.getElementById('pillFCH').textContent = Math.round(D.fcTotalHours).toLocaleString() + 'H';
+  document.getElementById('pillFCU').textContent = D.fcActiveUsers.toLocaleString() + '명';
+  document.getElementById('pillINFH').textContent = Math.round(D.infTotalHours).toLocaleString() + 'H';
+  document.getElementById('pillINFU').textContent = D.infActiveUsers.toLocaleString() + '명';
+  if (D.fcCategories.length) {
+    document.getElementById('pillFCCat').textContent = D.fcCategories[0].category;
+    document.getElementById('pillFCCatSub').textContent = D.fcCategories[0].count + '명 수강';
   }
-  const fData=D.months.map(m=>+(D.fcMH[m]||0).toFixed(1));
-  const iData=D.months.map(m=>+(D.infMH[m]||0).toFixed(1));
-  const maxF=Math.max(...fData,1),maxI=Math.max(...iData,1);
-  if(chartFCBar)chartFCBar.destroy();
-  chartFCBar=new Chart(document.getElementById('fcMonthlyBar'),{type:'bar',data:{labels:D.months,datasets:[{data:fData,backgroundColor:fData.map(v=>v===maxF?'#f59e0b':'rgba(245,158,11,0.35)'),borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toFixed(1)}H`}}},scales:{x:{grid:{display:false}},y:{display:false}}}});
-  if(chartINFBar)chartINFBar.destroy();
-  chartINFBar=new Chart(document.getElementById('infMonthlyBar'),{type:'bar',data:{labels:D.months,datasets:[{data:iData,backgroundColor:iData.map(v=>v===maxI?'#10b981':'rgba(16,185,129,0.35)'),borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toFixed(1)}H`}}},scales:{x:{grid:{display:false}},y:{display:false}}}});
+  if (D.infTopCourses.length) {
+    const n = D.infTopCourses[0].name;
+    document.getElementById('pillINFCourse').textContent = n.length > 12 ? n.slice(0,12)+'…' : n;
+    document.getElementById('pillINFCourseSub').textContent = D.infTopCourses[0].users + '명 수강';
+  }
+  const fData = D.monthlyStats.fc;
+  const iData = D.monthlyStats.inf;
+  const labels = D.monthlyStats.months.map(m => m.split('-')[1]+'월');
+  const maxF = Math.max(...fData, 1), maxI = Math.max(...iData, 1);
+  if (chartFCBar) chartFCBar.destroy();
+  chartFCBar = new Chart(document.getElementById('fcMonthlyBar'), {
+    type:'bar', data:{ labels, datasets:[{ data:fData, backgroundColor:fData.map(v=>v===maxF?'#f59e0b':'rgba(245,158,11,0.35)'), borderRadius:4 }] },
+    options:{ responsive:true, plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toFixed(1)}H`}}}, scales:{x:{grid:{display:false}},y:{display:false}} }
+  });
+  if (chartINFBar) chartINFBar.destroy();
+  chartINFBar = new Chart(document.getElementById('infMonthlyBar'), {
+    type:'bar', data:{ labels, datasets:[{ data:iData, backgroundColor:iData.map(v=>v===maxI?'#10b981':'rgba(16,185,129,0.35)'), borderRadius:4 }] },
+    options:{ responsive:true, plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toFixed(1)}H`}}}, scales:{x:{grid:{display:false}},y:{display:false}} }
+  });
 }
 
-function showL(v){document.getElementById('ls').classList.toggle('hidden',!v);}
-function hideErr(){document.getElementById('eb').classList.remove('show');}
-function showErr(m){document.getElementById('eb').classList.add('show');document.getElementById('em').textContent=m;}
-function setSpin(v){const i=document.getElementById('ri');i.style.animation=v?'spin .8s linear infinite':'none';i.textContent='↻';}
+function showL(v) { document.getElementById('ls').classList.toggle('hidden', !v); }
+function hideErr() { document.getElementById('eb').classList.remove('show'); }
+function showErr(m) { document.getElementById('eb').classList.add('show'); document.getElementById('em').textContent = m; }
+function setSpin(v) { const i = document.getElementById('ri'); i.style.animation = v ? 'spin .8s linear infinite' : 'none'; i.textContent = '↻'; }
 
 loadData();
 </script>
