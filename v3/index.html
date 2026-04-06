@@ -8,32 +8,32 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;
-    --border:rgba(99,179,237,0.12);--accent:#3b82f6;--accent2:#06b6d4;
-    --accent3:#8b5cf6;--fc-color:#f59e0b;--inf-color:#10b981;
-    --text:#e2e8f0;--muted:#64748b;--highlight:#60a5fa;
+    --bg:#f8fafc;--surface:#ffffff;--surface2:#f1f5f9;
+    --border:rgba(59,130,246,0.15);--accent:#3b82f6;--accent2:#0891b2;
+    --accent3:#7c3aed;--fc-color:#d97706;--inf-color:#059669;
+    --text:#1e293b;--muted:#64748b;--highlight:#2563eb;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;min-height:100vh;overflow-x:hidden;}
-  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(59,130,246,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.06) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
   .container{max-width:1440px;margin:0 auto;padding:32px 28px;position:relative;z-index:1;}
   #ls{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .5s;}
   #ls.hidden{opacity:0;pointer-events:none;}
   .sp{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:18px;}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .lt{font-size:14px;color:var(--muted);}
+  .lt{font-size:28px;color:var(--muted);}
   #eb{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:none;align-items:center;gap:10px;font-size:13px;}
   #eb.show{display:flex;}
   .er{margin-left:auto;padding:5px 14px;border-radius:6px;border:1px solid rgba(239,68,68,.4);background:transparent;color:#f87171;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
   .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:36px;gap:24px;flex-wrap:wrap;}
   .header-title{display:flex;align-items:center;gap:16px;}
-  .header-icon{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),var(--accent3));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;box-shadow:0 0 24px rgba(59,130,246,0.4);}
-  h1{font-size:22px;font-weight:700;color:#fff;line-height:1.3;}
-  h1 span{display:block;font-size:13px;font-weight:400;color:var(--muted);margin-top:3px;font-family:'Space Mono',monospace;}
+  .header-icon{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),var(--accent3));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;box-shadow:0 0 24px rgba(59,130,246,0.2);}
+  h1{font-size:44px;font-weight:700;color:#0f172a;line-height:1.3;}
+  h1 span{display:block;font-size:26px;font-weight:400;color:var(--muted);margin-top:3px;font-family:'Space Mono',monospace;}
   .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .update-badge{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:12px;color:var(--muted);font-family:'Space Mono',monospace;white-space:nowrap;}
+  .update-badge{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 22px;font-size:24px;color:var(--muted);font-family:'Space Mono',monospace;white-space:nowrap;}
   .update-badge b{color:var(--highlight);}
-  .refresh-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .2s;display:flex;align-items:center;gap:6px;}
+  .refresh-btn{padding:12px 20px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:24px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .2s;display:flex;align-items:center;gap:6px;}
   .refresh-btn:hover{border-color:var(--accent);color:var(--accent);}
   .kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
   .kpi{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 24px;position:relative;overflow:hidden;transition:border-color .2s;}
@@ -42,61 +42,61 @@
   .kpi.green::before{background:linear-gradient(90deg,var(--inf-color),#34d399);}
   .kpi.amber::before{background:linear-gradient(90deg,var(--fc-color),#fcd34d);}
   .kpi.purple::before{background:linear-gradient(90deg,var(--accent3),#c4b5fd);}
-  .kpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
-  .kpi-value{font-size:36px;font-weight:900;color:#fff;font-family:'Space Mono',monospace;line-height:1;}
-  .kpi-sub{font-size:12px;color:var(--muted);margin-top:8px;}
+  .kpi-label{font-size:22px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+  .kpi-value{font-size:72px;font-weight:900;color:#0f172a;font-family:'Space Mono',monospace;line-height:1;}
+  .kpi-sub{font-size:24px;color:var(--muted);margin-top:8px;}
   .kpi-sub b{color:var(--highlight);}
   .kpi-badge{position:absolute;top:18px;right:18px;font-size:22px;opacity:.25;}
-  .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent2);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .section-label{font-size:22px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent2);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
   .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
   .grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:24px;}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;position:relative;overflow:hidden;}
-  .card-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between;}
+  .card-title{font-size:26px;font-weight:700;color:#0f172a;margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between;}
   .card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;}
   .card-title .dot.green{background:var(--inf-color);}
   .card-title .dot.amber{background:var(--fc-color);}
   .card-title .dot.purple{background:var(--accent3);}
-  .entity-table{width:100%;border-collapse:collapse;font-size:12px;}
-  .entity-table th{text-align:left;color:var(--muted);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.06em;}
-  .entity-table td{padding:8px 8px;border-bottom:1px solid rgba(99,179,237,0.05);vertical-align:middle;}
+  .entity-table{width:100%;border-collapse:collapse;font-size:24px;}
+  .entity-table th{text-align:left;color:var(--muted);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--border);font-size:20px;text-transform:uppercase;letter-spacing:.06em;}
+  .entity-table td{padding:12px 10px;border-bottom:1px solid rgba(99,179,237,0.05);vertical-align:middle;}
   .entity-table tr:last-child td{border-bottom:none;}
   .entity-table tr:hover td{background:rgba(59,130,246,0.05);}
   .entity-name{font-weight:500;color:var(--text);}
   .rate-bar-wrap{width:90px;}
   .rate-bar{height:6px;border-radius:3px;background:rgba(99,179,237,0.12);overflow:hidden;}
   .rate-bar-fill{height:100%;border-radius:3px;transition:width .6s ease;}
-  .rate-val{color:var(--highlight);font-weight:700;font-family:'Space Mono',monospace;font-size:11px;}
-  .total-row td{background:rgba(59,130,246,0.08);font-weight:700;color:#fff;}
+  .rate-val{color:var(--highlight);font-weight:700;font-family:'Space Mono',monospace;font-size:22px;}
+  .total-row td{background:rgba(59,130,246,0.08);font-weight:700;color:#1e293b;}
   .course-list{display:flex;flex-direction:column;gap:10px;}
   .course-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid transparent;transition:border-color .2s;}
   .course-item:hover{border-color:var(--border);}
-  .course-rank{width:22px;height:22px;border-radius:6px;background:rgba(59,130,246,0.15);color:var(--accent);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Space Mono',monospace;}
+  .course-rank{width:40px;height:40px;border-radius:8px;background:rgba(59,130,246,0.15);color:var(--accent);font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Space Mono',monospace;}
   .course-rank.top3{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;}
-  .course-name{flex:1;font-size:12px;color:var(--text);line-height:1.4;}
-  .course-count{font-size:14px;font-weight:700;color:#fff;font-family:'Space Mono',monospace;flex-shrink:0;}
+  .course-name{flex:1;font-size:24px;color:var(--text);line-height:1.4;}
+  .course-count{font-size:28px;font-weight:700;color:#0f172a;font-family:'Space Mono',monospace;flex-shrink:0;}
   .course-count span{font-size:10px;color:var(--muted);font-family:'Noto Sans KR';font-weight:400;}
   .day-bars{display:flex;gap:10px;align-items:flex-end;height:140px;}
   .day-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
   .day-bar-inner{width:100%;border-radius:6px 6px 0 0;transition:opacity .2s;min-width:28px;}
-  .day-label{font-size:11px;color:var(--muted);}
-  .day-value{font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;}
+  .day-label{font-size:22px;color:var(--muted);}
+  .day-value{font-size:18px;color:var(--muted);font-family:'Space Mono',monospace;}
   .cat-list{display:flex;flex-direction:column;gap:9px;}
   .cat-item{display:flex;align-items:center;gap:10px;}
-  .cat-name{width:95px;font-size:11px;color:var(--muted);flex-shrink:0;text-align:right;}
+  .cat-name{width:160px;font-size:22px;color:var(--muted);flex-shrink:0;text-align:right;}
   .cat-bar-wrap{flex:1;height:8px;background:rgba(99,179,237,0.1);border-radius:4px;overflow:hidden;}
   .cat-bar{height:100%;border-radius:4px;}
-  .cat-val{width:36px;text-align:right;font-size:11px;color:var(--text);font-family:'Space Mono',monospace;flex-shrink:0;}
+  .cat-val{width:56px;text-align:right;font-size:22px;color:var(--text);font-family:'Space Mono',monospace;flex-shrink:0;}
   .platform-pills{display:flex;gap:12px;margin-bottom:20px;}
   .platform-pill{flex:1;padding:14px;border-radius:12px;border:1px solid var(--border);text-align:center;}
   .platform-pill.fc{border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.05);}
   .platform-pill.inf{border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.05);}
-  .platform-pill .name{font-size:11px;color:var(--muted);margin-bottom:6px;}
-  .platform-pill .val{font-size:22px;font-weight:900;font-family:'Space Mono',monospace;}
+  .platform-pill .name{font-size:22px;color:var(--muted);margin-bottom:6px;}
+  .platform-pill .val{font-size:44px;font-weight:900;font-family:'Space Mono',monospace;}
   .platform-pill.fc .val{color:var(--fc-color);}
   .platform-pill.inf .val{color:var(--inf-color);}
-  .platform-pill .sub{font-size:10px;color:var(--muted);margin-top:4px;}
-  .footnote{font-size:11px;color:var(--muted);line-height:1.7;margin-top:24px;padding:16px 20px;background:var(--surface);border-radius:12px;border-left:3px solid var(--accent);}
+  .platform-pill .sub{font-size:20px;color:var(--muted);margin-top:4px;}
+  .footnote{font-size:22px;color:var(--muted);line-height:1.7;margin-top:24px;padding:16px 20px;background:var(--surface);border-radius:12px;border-left:3px solid var(--accent);}
   .footnote b{color:var(--text);}
   canvas{display:block;}
   .corp-filter{display:flex;flex-direction:column;gap:6px;min-width:130px;max-height:320px;overflow-y:auto;padding-right:4px;}
@@ -106,10 +106,11 @@
   .corp-cb{display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s;}
   .corp-cb:hover{background:var(--surface2);}
   .corp-cb input{accent-color:var(--accent);cursor:pointer;width:13px;height:13px;}
-  .corp-cb span{font-size:11px;color:var(--text);}
+  .corp-cb span{font-size:22px;color:var(--text);}
   .platform-section{display:flex;gap:16px;align-items:flex-start;}
-  .daily-chart-wrap{flex:1;min-width:0;}
-  .daily-legend{display:flex;gap:16px;font-size:11px;margin-bottom:10px;}
+  .daily-chart-wrap{flex:2;min-width:0;}
+  .daily-legend{display:flex;gap:16px;font-size:22px;margin-bottom:10px;}
+  .corp-filter{min-width:120px;max-width:120px;}
   @keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
   .kpi{animation:fadeUp .5s ease both;}
   .kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.10s}
@@ -121,7 +122,7 @@
 <div id="ls">
   <div class="sp"></div>
   <div class="lt">구글 시트에서 데이터를 불러오는 중...</div>
-  <div class="lt" id="lsub" style="font-size:12px;color:#2a3a55;margin-top:6px;">잠시만 기다려주세요</div>
+  <div class="lt" id="lsub" style="font-size:12px;color:#94a3b8;margin-top:6px;">잠시만 기다려주세요</div>
 </div>
 <div class="container">
   <div id="eb"><span>⚠️</span><span id="em">데이터를 불러오지 못했습니다.</span><button class="er" onclick="loadData()">다시 시도</button></div>
@@ -158,7 +159,7 @@
       <div class="daily-chart-wrap">
         <canvas id="fcDailyChart" height="100"></canvas>
       </div>
-      <div style="min-width:320px">
+      <div style="min-width:280px;max-width:280px">
         <table class="entity-table" id="fcEntityTable">
           <thead><tr><th>소속</th><th style="text-align:right">총원(A)</th><th style="text-align:right">수강인원(B)</th><th style="text-align:right">사용률</th></tr></thead>
           <tbody id="fcEntityRows"></tbody>
@@ -181,14 +182,36 @@
       <div class="daily-chart-wrap">
         <canvas id="infDailyChart" height="100"></canvas>
       </div>
-      <div style="min-width:320px">
+      <div style="min-width:280px;max-width:280px">
         <table class="entity-table" id="infEntityTable">
           <thead><tr><th>소속</th><th style="text-align:right">총원(A)</th><th style="text-align:right">수강인원(B)</th><th style="text-align:right">사용률</th></tr></thead>
           <tbody id="infEntityRows"></tbody>
         </table>
       </div>
     </div>
+
+  <div class="section-label">🔍 플랫폼별 수강 현황 요약</div>
+  <div class="grid-2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title"><span class="dot amber"></span> 패스트캠퍼스 요약</div>
+      <div class="platform-pills">
+        <div class="platform-pill fc"><div class="name">총 학습시간</div><div class="val" id="pillFCH">—</div><div class="sub">런칭 이후 누적</div></div>
+        <div class="platform-pill fc"><div class="name">수강 인원</div><div class="val" id="pillFCU">—</div><div class="sub">활성 인원</div></div>
+        <div class="platform-pill fc"><div class="name">최다 카테고리</div><div class="val" id="pillFCCat" style="font-size:14px">—</div><div class="sub" id="pillFCCatSub">—</div></div>
+      </div>
+      <canvas id="fcMonthlyBar" height="90"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot green"></span> 인프런 요약</div>
+      <div class="platform-pills">
+        <div class="platform-pill inf"><div class="name">총 학습시간</div><div class="val" id="pillINFH">—</div><div class="sub">런칭 이후 누적</div></div>
+        <div class="platform-pill inf"><div class="name">수강 인원</div><div class="val" id="pillINFU">—</div><div class="sub">활성 인원</div></div>
+        <div class="platform-pill inf"><div class="name">최다 인기 강좌</div><div class="val" id="pillINFCourse" style="font-size:11px;line-height:1.3">—</div><div class="sub" id="pillINFCourseSub">—</div></div>
+      </div>
+      <canvas id="infMonthlyBar" height="90"></canvas>
+    </div>
   </div>
+
   <div class="grid-2-1">
     <div class="card">
       <div class="card-title"><span class="dot"></span> ① 법인별 이용 현황</div>
@@ -215,38 +238,12 @@
     <div class="card"><div class="card-title"><span class="dot amber"></span> 패스트캠퍼스 인기 강좌 TOP 5</div><div class="course-list" id="fcCourses"></div></div>
     <div class="card"><div class="card-title"><span class="dot green"></span> 인프런 인기 강좌 TOP 5</div><div class="course-list" id="infCourses"></div></div>
   </div>
-  <div class="section-label">📂 카테고리 & 본부별 현황</div>
-  <div class="grid-2" style="margin-bottom:24px">
-    <div class="card">
-      <div class="card-title"><span class="dot amber"></span> 수강 카테고리 분포</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">패스트캠퍼스</div>
-      <div class="cat-list" id="catFC"></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:18px;margin-bottom:8px">인프런</div>
-      <div class="cat-list" id="catINF"></div>
-    </div>
-    <div class="card"><div class="card-title"><span class="dot green"></span> KRAFTON, Inc. 본부별 이용현황</div><canvas id="deptChart" height="260"></canvas></div>
+  <div class="section-label">📂 본부별 현황</div>
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-title"><span class="dot green"></span> KRAFTON, Inc. 본부별 이용현황</div>
+    <canvas id="deptChart" height="200"></canvas>
   </div>
-  <div class="section-label">🔍 플랫폼별 수강 현황 요약</div>
-  <div class="grid-2" style="margin-bottom:24px">
-    <div class="card">
-      <div class="card-title"><span class="dot amber"></span> 패스트캠퍼스 요약</div>
-      <div class="platform-pills">
-        <div class="platform-pill fc"><div class="name">총 학습시간</div><div class="val" id="pillFCH">—</div><div class="sub">런칭 이후 누적</div></div>
-        <div class="platform-pill fc"><div class="name">수강 인원</div><div class="val" id="pillFCU">—</div><div class="sub">활성 인원</div></div>
-        <div class="platform-pill fc"><div class="name">최다 카테고리</div><div class="val" id="pillFCCat" style="font-size:14px">—</div><div class="sub" id="pillFCCatSub">—</div></div>
-      </div>
-      <canvas id="fcMonthlyBar" height="90"></canvas>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot green"></span> 인프런 요약</div>
-      <div class="platform-pills">
-        <div class="platform-pill inf"><div class="name">총 학습시간</div><div class="val" id="pillINFH">—</div><div class="sub">런칭 이후 누적</div></div>
-        <div class="platform-pill inf"><div class="name">수강 인원</div><div class="val" id="pillINFU">—</div><div class="sub">활성 인원</div></div>
-        <div class="platform-pill inf"><div class="name">최다 인기 강좌</div><div class="val" id="pillINFCourse" style="font-size:11px;line-height:1.3">—</div><div class="sub" id="pillINFCourseSub">—</div></div>
-      </div>
-      <canvas id="infMonthlyBar" height="90"></canvas>
-    </div>
-  </div>
+
   <div class="footnote">
     <b>* 대상 총원</b>: 국내 재직 중인 KRAFTON HQ, KR Studios, Beyond the Game 구성원<br>
     <b>** 수강 인원</b>: 본 제도를 1회 이상 사용한 인원 (플랫폼 합산 기준, 법인별 합계는 법인 내 중복 제거 기준)<br>
@@ -263,7 +260,7 @@ let selectedFCCorps=new Set(), selectedINFCorps=new Set(), globalData=null;
 Chart.defaults.color='#64748b';
 Chart.defaults.borderColor='rgba(99,179,237,0.1)';
 Chart.defaults.font.family="'Space Mono','Noto Sans KR',sans-serif";
-Chart.defaults.font.size=11;
+Chart.defaults.font.size=18;
 
 function loadData() {
   showL(true); hideErr(); setSpin(true);
