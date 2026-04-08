@@ -1,6 +1,6 @@
 <!-- ============================================
   AI 역량강화 교육 대시보드 - index.html
-  Version: 2.0.0
+  Version: 3.0.0
   Updated: 2026-04-08
   변경: 2차 호출 방식 적용 (type=main / type=daily)
 ============================================ -->
@@ -260,7 +260,7 @@
   </div>
 </div>
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzY1ruXpWo5A5LzSr_csLa2lT500cbxk9CCdbD93zx5O9pGR53LNTUcj4dFFYmdS2vk/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxDxrTTefZlKoWjzGUnGY8KxAOtdYAwx-upGWllofr8AUeMdEC2Iu-9V9L4B9tiFqo/exec';
 const DOW_ORDER = ['일','월','화','수','목','금','토'];
 const CAT_COLORS = ['#f59e0b','#fb923c','#f87171','#a78bfa','#60a5fa','#34d399','#4ade80','#facc15','#e879f9','#38bdf8'];
 let chartFCDaily=null, chartINFDaily=null, chartDept=null, chartFCBar=null, chartINFBar=null;
@@ -287,17 +287,15 @@ function fetchJSONP(url, timeout) {
 async function loadData() {
   showL(true); hideErr(); setSpin(true);
   try {
-    // 1차: 메인 데이터 (빠름) - 화면 먼저 표시
     document.getElementById('lsub').textContent = '메인 데이터 로딩 중...';
     const main = await fetchJSONP(`${GAS_URL}?type=main`, 60000);
     if (main.error) throw new Error(main.error);
     render(main);
     showL(false); setSpin(false);
 
-    // 2차: 일별+본부별 데이터 (느림 - 백그라운드)
+    // 2차: 일별+본부별 백그라운드 로딩
     showDailyLoading(true);
     try {
-      document.getElementById('lsub').textContent = '상세 데이터 로딩 중...';
       const daily = await fetchJSONP(`${GAS_URL}?type=daily`, 120000);
       if (!daily.error && daily.dailyStats) {
         globalData.dailyStats = daily.dailyStats;
@@ -308,9 +306,7 @@ async function loadData() {
         updateDailyChart('fc', globalData);
         updateDailyChart('inf', globalData);
       }
-    } catch(e) {
-      console.warn('일별 데이터 로드 실패:', e);
-    }
+    } catch(e) { console.warn('2차 데이터 로드 실패:', e); }
     showDailyLoading(false);
   } catch(e) {
     showL(false); setSpin(false);
@@ -321,8 +317,7 @@ async function loadData() {
 function showDailyLoading(v) {
   ['fcDailyChart','infDailyChart'].forEach(id => {
     const el = document.getElementById(id);
-    if (!el) return;
-    el.style.opacity = v ? '0.3' : '1';
+    if (el) el.style.opacity = v ? '0.3' : '1';
   });
 }
 
