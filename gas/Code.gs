@@ -240,15 +240,21 @@ function parseDow_(rows) {
     return order.map(function (day) { return { day: day, pct: 0 }; });
   }
 
+  var header = rows[0] || [];
+  var dayHoursCol = findHeaderIndex_(header, /(접속요일)/i, 5);
+  var hoursCol = findNextHeaderIndex_(header, dayHoursCol, /(학습시간|hours)/i, 6);
+  var dayPctCol = findHeaderIndex_(header, /(행\s*레이블)/i, 8);
+  var pctCol = findNextHeaderIndex_(header, dayPctCol, /(비율|합계|rate|percent|%)/i, 9);
+
   for (var i = 1; i < rows.length; i += 1) {
-    var dayA = clean_(rows[i][8]);
-    var pct = toPercent_(rows[i][9]);
+    var dayA = clean_(rows[i][dayPctCol]);
+    var pct = toPercent_(rows[i][pctCol]);
     if (order.indexOf(dayA) >= 0 && pct > 0) {
       byPct[dayA] = pct;
     }
 
-    var dayB = clean_(rows[i][5]);
-    var h = toNumber_(rows[i][6]);
+    var dayB = clean_(rows[i][dayHoursCol]);
+    var h = toNumber_(rows[i][hoursCol]);
     if (order.indexOf(dayB) >= 0 && h > 0) {
       byHours[dayB] = (byHours[dayB] || 0) + h;
     }
@@ -454,6 +460,24 @@ function unique_(listOfLists) {
     });
   });
   return Object.keys(s);
+}
+
+function findHeaderIndex_(header, regex, fallback) {
+  for (var i = 0; i < header.length; i += 1) {
+    if (regex.test(clean_(header[i]))) {
+      return i;
+    }
+  }
+  return fallback;
+}
+
+function findNextHeaderIndex_(header, fromIdx, regex, fallback) {
+  for (var i = Math.max(0, fromIdx + 1); i < header.length; i += 1) {
+    if (regex.test(clean_(header[i]))) {
+      return i;
+    }
+  }
+  return fallback;
 }
 
 function round1_(n) {
