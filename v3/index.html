@@ -118,7 +118,7 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
 <div class="page">
 
 <!-- 섹션1 -->
-<div class="sec-title">①법인&기간별 이용 현황 <span class="dr">기간: 2025. 09.22(런칭) ~ 현재</span></div>
+<div class="sec-title">①법인&기간별 이용 현황 <span class="dr" id="period-label-1">기간: -</span></div>
 
 <!-- FC 행 -->
 <div class="s1-row">
@@ -155,7 +155,7 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
 </div>
 
 <!-- 섹션2 -->
-<div class="sec-title blue" style="margin-top:10px;">②KRAFTON, Inc. 본부별 이용현황 <span class="dr">기간: 2025. 09.22(런칭) ~ 현재</span></div>
+<div class="sec-title blue" style="margin-top:10px;">②KRAFTON, Inc. 본부별 이용현황 <span class="dr" id="period-label-2">기간: -</span></div>
 <div class="s2-grid">
   <div class="dept-card">
     <div class="plat-hdr">
@@ -201,19 +201,20 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
 </div><!-- /page -->
 
 <script>
-// ★ GAS URL 여기에 붙여넣기 ★
+// 배포된 GAS 웹앱 URL
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzfO2jxhWWp-l7dfLinZjE0UypGHaKeVCo3ir1s4yV35xKUS-Af6xo2k3uelgzamiz_/exec';
 
-// 법인별 고정 총원 (대시보드 시트 AC열 기준)
-const CORP_TOTAL = {
+// fallback (API의 corpTotals가 비어 있을 때만 사용)
+const CORP_TOTAL_FALLBACK = {
   'KRAFTON HQ':1263,'PUBG STUDIOS':661,'bluehole studio':151,
   'inZOI studio':131,'5minlab':113,'Rising Wings':64,
   'OVERDARE':99,'Omni Craftlabs':93,'Flyway Games':78,
   'ReLU Games':39,'Dreamotion':30,'JOFSOFT':9,
   'Loonshot Games':40,'Olivetree Games':16,'기타(해외파견)':2
 };
+let corpTotalMap = { ...CORP_TOTAL_FALLBACK };
 
-/* ── 데이터 로드 ── */
+/* 데이터 로드 */
 function load() {
   const s = document.createElement('script');
   s.src = GAS_URL + '?callback=onData&t=' + Date.now();
@@ -228,8 +229,11 @@ function load() {
 function onData(d) {
   if (d.error) { showErr('GAS 오류: ' + d.error); return; }
   try {
+    corpTotalMap = Object.keys(d.corpTotals || {}).length ? d.corpTotals : { ...CORP_TOTAL_FALLBACK };
     renderAll(d);
     document.getElementById('upd-date').textContent = d.updatedAt || '-';
+    document.getElementById('period-label-1').textContent = d.periodLabel ? `기간: ${d.periodLabel}` : '기간: -';
+    document.getElementById('period-label-2').textContent = d.periodLabel ? `기간: ${d.periodLabel}` : '기간: -';
     document.getElementById('loading').classList.add('hide');
   } catch(e) { showErr('렌더링 오류: ' + e.message); }
 }
@@ -240,7 +244,7 @@ function showErr(msg) {
   b.style.display = 'block'; b.textContent = '⚠️ ' + msg;
 }
 
-/* ── 전체 렌더링 ── */
+/* 전체 렌더링 */
 function renderAll(d) {
   renderKPI(d.kpi);
   renderDailyChart('fc', d.fcDaily || []);
@@ -260,9 +264,9 @@ function renderAll(d) {
 /* KPI */
 function renderKPI(k) {
   if (!k) return;
-  document.getElementById('k-total').textContent = (k.totalHeadcount||2787).toLocaleString() + ' 명';
+  document.getElementById('k-total').textContent = Math.round(k.totalHeadcount||0).toLocaleString() + ' 명';
   document.getElementById('k-users').textContent = (k.totalUsers||0).toLocaleString() + ' 명';
-  document.getElementById('k-rate').textContent  = (k.usageRate||0) + '%';
+  document.getElementById('k-rate').textContent  = (Math.round((k.usageRate||0)*10)/10) + '%';
 }
 
 /* 일별 차트 */
@@ -303,15 +307,14 @@ function renderCorpTable(p, corps) {
   const tfoot = document.getElementById(p+'-tfoot');
   if (!tbody) return;
 
-  // 고정 순서로 정렬
-  const order = Object.keys(CORP_TOTAL);
+  const order = Object.keys(corpTotalMap);
   const map = {};
   corps.forEach(c => map[c.name] = c);
 
   let sumTotal=0, sumUsers=0;
   tbody.innerHTML = order.map(name => {
     const c = map[name] || {};
-    const total = CORP_TOTAL[name] || 0;
+    const total = corpTotalMap[name] || 0;
     const users = c.users || 0;
     const rate  = c.rate  || (total>0 ? Math.round(users/total*1000)/10 : 0);
     sumTotal += total; sumUsers += users;
@@ -323,12 +326,12 @@ function renderCorpTable(p, corps) {
   tfoot.innerHTML = `<tr><td>합계</td><td>${sumTotal.toLocaleString()}</td><td>${sumUsers.toLocaleString()}</td><td>${sumRate}%</td></tr>`;
 }
 
-/* 법인 리스트 (좌측) */
-function renderCorpList(p, corps) {
+/* 법인 리스트 */
+function renderCorpList(p) {
   const el = document.getElementById(p+'-corp-list');
   if (!el) return;
   el.innerHTML = '<div class="cl-hdr">법인</div>' +
-    Object.keys(CORP_TOTAL).map(n => `<div class="cl-item">${n}</div>`).join('');
+    Object.keys(corpTotalMap).map(n => `<div class="cl-item">${n}</div>`).join('');
 }
 
 /* 본부별 차트 */
@@ -394,28 +397,11 @@ function renderDowChart(p, dowData) {
         x:{ ticks:{font:{size:11}}, grid:{display:false} },
         y:{ ticks:{font:{size:9},callback:v=>v+'%'}, grid:{color:'rgba(0,0,0,.04)'} }
       }
-    },
-    plugins:[{
-      id:'datalabels',
-      afterDatasetDraw(chart) {
-        const {ctx,data} = chart;
-        chart.getDatasetMeta(0).data.forEach((bar,i) => {
-          const v = data.datasets[0].data[i];
-          if (v>0) {
-            ctx.save();
-            ctx.font = 'bold 10px Noto Sans KR';
-            ctx.fillStyle = '#333';
-            ctx.textAlign = 'center';
-            ctx.fillText(v+'%', bar.x, bar.y-5);
-            ctx.restore();
-          }
-        });
-      }
-    }]
+    }
   });
 }
 
-/* 인기강좌 테이블 */
+/* 인기강좌 */
 function renderCourses(p, courses) {
   const tbody = document.getElementById(p+'-courses');
   if (!tbody||!courses.length) return;
