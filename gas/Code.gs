@@ -141,10 +141,11 @@ function parseDailyTrend_(rows) {
   }
   const out = [];
   for (var i = 1; i < rows.length; i += 1) {
-    var dayLabel = clean_(rows[i][2]);
-    if (!/^\d{1,2}-\d{1,2}월$/.test(dayLabel)) {
+    var rawDay = clean_(rows[i][2]);
+    if (!/^\d{1,2}-\d{1,2}월$/.test(rawDay)) {
       continue;
     }
+    var dayLabel = formatPivotDayLabel_(rawDay);
     out.push({
       dateLabel: dayLabel,
       hours: round2_(toNumber_(rows[i][3])),
@@ -202,6 +203,30 @@ function parseDeptRows_(rows) {
       users: users,
     });
   }
+  // Defensive fallback: when corp/dept structured parsing fails,
+  // recover from generic [corp, dept, hours, users] rows.
+  if (!out.length) {
+    for (var j = 1; j < rows.length; j += 1) {
+      var corp2 = clean_(rows[j][0]);
+      var dept2 = clean_(rows[j][1]);
+      var hours2 = round2_(toNumber_(rows[j][2]));
+      var users2 = Math.round(toNumber_(rows[j][3]));
+      if (!corp2 || !dept2 || isTotalLabel_(corp2) || isTotalLabel_(dept2)) {
+        continue;
+      }
+      out.push({
+        corp: corp2,
+        dept: dept2,
+        deptLabel: shortCorp_(corp2) + ' | ' + dept2,
+        hours: hours2,
+        users: users2,
+      });
+    }
+  }
+
+  out = out.filter(function (row) {
+    return row.hours > 0 || row.users > 0;
+  });
   out.sort(function (a, b) { return b.hours - a.hours; });
   return out.slice(0, 30);
 }
@@ -437,4 +462,18 @@ function round1_(n) {
 
 function round2_(n) {
   return Math.round((n || 0) * 100) / 100;
+}
+
+function formatPivotDayLabel_(value) {
+  var s = clean_(value);
+  var m = /^(\d{1,2})-(\d{1,2})월$/.exec(s);
+  if (!m) {
+    return s;
+  }
+  var day = parseInt(m[1], 10);
+  var month = parseInt(m[2], 10);
+  if (isNaN(day) || isNaN(month)) {
+    return s;
+  }
+  return month + '월 ' + day + '일';
 }
