@@ -155,7 +155,7 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
 </div>
 
 <!-- 섹션2 -->
-<div class="sec-title blue" style="margin-top:10px;">②KRAFTON, Inc. 본부별 이용현황 <span class="dr" id="period-label-2">기간: -</span></div>
+<div class="sec-title blue" style="margin-top:10px;">②KRAFTON, Inc. 본부별 이용현황</div>
 <div class="s2-grid">
   <div class="dept-card">
     <div class="plat-hdr">
@@ -237,7 +237,6 @@ function onData(d) {
     renderAll(d);
     document.getElementById('upd-date').textContent = d.updatedAt || '-';
     document.getElementById('period-label-1').textContent = d.periodLabel ? `기간: ${d.periodLabel}` : '기간: -';
-    document.getElementById('period-label-2').textContent = d.periodLabel ? `기간: ${d.periodLabel}` : '기간: -';
     document.getElementById('loading').classList.add('hide');
   } catch(e) { showErr('렌더링 오류: ' + e.message); }
 }
