@@ -141,7 +141,7 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
 <div class="s1-row" style="margin-top:8px;">
   <div class="corp-list" id="inf-corp-list"><div class="cl-hdr">법인</div></div>
   <div class="chart-area">
-    <div class="plat-hdr"><span class="inf-badge">∞inflearn</span></div>
+    <div class="plat-hdr"><span class="inf-badge">inflearn</span></div>
     <div class="legend">
       <div class="leg"><div class="leg-dot" style="background:#80cbc4"></div><span>합계 : 학습시간(H)</span></div>
       <div class="leg"><div class="leg-line" style="background:#00897b"></div><span>합계 : 수강인원(명)</span></div>
@@ -155,7 +155,7 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
 </div>
 
 <!-- 섹션2 -->
-<div class="sec-title blue" style="margin-top:10px;">②KRAFTON, Inc. 본부별 이용현황 <span class="dr" id="period-label-2">기간: -</span></div>
+<div class="sec-title blue" style="margin-top:10px;">②KRAFTON, Inc. 본부별 이용현황</div>
 <div class="s2-grid">
   <div class="dept-card">
     <div class="plat-hdr">
@@ -166,7 +166,7 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
   </div>
   <div class="dept-card">
     <div class="plat-hdr">
-      <span class="inf-badge">∞inflearn</span>
+      <span class="inf-badge">inflearn</span>
       <span style="font-size:10px;color:#888;margin-left:6px;">— 누적 학습시간(H) &nbsp; ● 활성유저 수(명)</span>
     </div>
     <div class="dept-wrap"><canvas id="inf-dept"></canvas></div>
@@ -187,7 +187,7 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
     </table>
   </div>
   <div class="ref-card">
-    <div class="plat-hdr"><span class="inf-badge">∞inflearn</span></div>
+    <div class="plat-hdr"><span class="inf-badge">inflearn</span></div>
     <div class="ref-title">요일 별 학습시간 비중</div>
     <div class="dow-wrap"><canvas id="inf-dow"></canvas></div>
     <div class="ref-title">인기 강좌 순위</div>
@@ -201,8 +201,8 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
 </div><!-- /page -->
 
 <script>
-// 배포된 GAS 웹앱 URL
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzfO2jxhWWp-l7dfLinZjE0UypGHaKeVCo3ir1s4yV35xKUS-Af6xo2k3uelgzamiz_/exec';
+// ★ 배포한 GAS 웹앱 URL로 교체하세요 ★
+const GAS_URL = 'YOUR_DEPLOYED_GAS_WEBAPP_URL';
 
 // fallback (API의 corpTotals가 비어 있을 때만 사용)
 const CORP_TOTAL_FALLBACK = {
@@ -214,8 +214,12 @@ const CORP_TOTAL_FALLBACK = {
 };
 let corpTotalMap = { ...CORP_TOTAL_FALLBACK };
 
-/* 데이터 로드 */
+/* ── 데이터 로드 ── */
 function load() {
+  if (!GAS_URL || GAS_URL.indexOf('YOUR_DEPLOYED_GAS_WEBAPP_URL') >= 0) {
+    showErr('GAS_URL 값을 먼저 설정해주세요.');
+    return;
+  }
   const s = document.createElement('script');
   s.src = GAS_URL + '?callback=onData&t=' + Date.now();
   s.onerror = () => showErr('GAS 연결 실패');
@@ -233,7 +237,6 @@ function onData(d) {
     renderAll(d);
     document.getElementById('upd-date').textContent = d.updatedAt || '-';
     document.getElementById('period-label-1').textContent = d.periodLabel ? `기간: ${d.periodLabel}` : '기간: -';
-    document.getElementById('period-label-2').textContent = d.periodLabel ? `기간: ${d.periodLabel}` : '기간: -';
     document.getElementById('loading').classList.add('hide');
   } catch(e) { showErr('렌더링 오류: ' + e.message); }
 }
@@ -244,7 +247,7 @@ function showErr(msg) {
   b.style.display = 'block'; b.textContent = '⚠️ ' + msg;
 }
 
-/* 전체 렌더링 */
+/* ── 전체 렌더링 ── */
 function renderAll(d) {
   renderKPI(d.kpi);
   renderDailyChart('fc', d.fcDaily || []);
@@ -326,7 +329,7 @@ function renderCorpTable(p, corps) {
   tfoot.innerHTML = `<tr><td>합계</td><td>${sumTotal.toLocaleString()}</td><td>${sumUsers.toLocaleString()}</td><td>${sumRate}%</td></tr>`;
 }
 
-/* 법인 리스트 */
+/* 법인 리스트 (좌측) */
 function renderCorpList(p) {
   const el = document.getElementById(p+'-corp-list');
   if (!el) return;
@@ -397,11 +400,28 @@ function renderDowChart(p, dowData) {
         x:{ ticks:{font:{size:11}}, grid:{display:false} },
         y:{ ticks:{font:{size:9},callback:v=>v+'%'}, grid:{color:'rgba(0,0,0,.04)'} }
       }
-    }
+    },
+    plugins:[{
+      id:'datalabels',
+      afterDatasetDraw(chart) {
+        const {ctx,data} = chart;
+        chart.getDatasetMeta(0).data.forEach((bar,i) => {
+          const v = data.datasets[0].data[i];
+          if (v>0) {
+            ctx.save();
+            ctx.font = 'bold 10px Noto Sans KR';
+            ctx.fillStyle = '#333';
+            ctx.textAlign = 'center';
+            ctx.fillText(v+'%', bar.x, bar.y-5);
+            ctx.restore();
+          }
+        });
+      }
+    }]
   });
 }
 
-/* 인기강좌 */
+/* 인기강좌 테이블 */
 function renderCourses(p, courses) {
   const tbody = document.getElementById(p+'-courses');
   if (!tbody||!courses.length) return;
