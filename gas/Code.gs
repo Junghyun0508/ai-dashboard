@@ -247,13 +247,13 @@ function parseDow_(rows) {
   var pctCol = findNextHeaderIndex_(header, dayPctCol, /(비율|합계|rate|percent|%)/i, 9);
 
   for (var i = 1; i < rows.length; i += 1) {
-    var dayA = clean_(rows[i][dayPctCol]);
+    var dayA = normalizeDow_(rows[i][dayPctCol]);
     var pct = toPercent_(rows[i][pctCol]);
     if (order.indexOf(dayA) >= 0 && pct > 0) {
       byPct[dayA] = pct;
     }
 
-    var dayB = clean_(rows[i][dayHoursCol]);
+    var dayB = normalizeDow_(rows[i][dayHoursCol]);
     var h = toNumber_(rows[i][hoursCol]);
     if (order.indexOf(dayB) >= 0 && h > 0) {
       byHours[dayB] = (byHours[dayB] || 0) + h;
@@ -429,6 +429,31 @@ function toPercent_(v) {
 
 function clean_(v) {
   return String(v || '').trim();
+}
+
+function normalizeDow_(v) {
+  var s = clean_(v);
+  if (!s) {
+    return '';
+  }
+  // Keep only Korean weekday characters where possible.
+  if (s.indexOf('일') >= 0) return '일';
+  if (s.indexOf('월') >= 0) return '월';
+  if (s.indexOf('화') >= 0) return '화';
+  if (s.indexOf('수') >= 0) return '수';
+  if (s.indexOf('목') >= 0) return '목';
+  if (s.indexOf('금') >= 0) return '금';
+  if (s.indexOf('토') >= 0) return '토';
+
+  var en = s.toLowerCase();
+  if (en.indexOf('sun') >= 0) return '일';
+  if (en.indexOf('mon') >= 0) return '월';
+  if (en.indexOf('tue') >= 0) return '화';
+  if (en.indexOf('wed') >= 0) return '수';
+  if (en.indexOf('thu') >= 0) return '목';
+  if (en.indexOf('fri') >= 0) return '금';
+  if (en.indexOf('sat') >= 0) return '토';
+  return s;
 }
 
 function isTotalLabel_(text) {
