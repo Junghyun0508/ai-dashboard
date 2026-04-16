@@ -201,8 +201,10 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
 </div><!-- /page -->
 
 <script>
+// ★ 배포한 GAS 웹앱 URL로 교체하세요 ★
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzfO2jxhWWp-l7dfLinZjE0UypGHaKeVCo3ir1s4yV35xKUS-Af6xo2k3uelgzamiz_/exec';
 
+// fallback (GAS 연결 실패 시에만 사용)
 const CORP_TOTAL_FALLBACK = {
   'KRAFTON HQ':1263,'PUBG STUDIOS':661,'bluehole studio':151,
   'inZOI studio':131,'5minlab':113,'Rising Wings':64,
@@ -212,7 +214,12 @@ const CORP_TOTAL_FALLBACK = {
 };
 let corpTotalMap = { ...CORP_TOTAL_FALLBACK };
 
+/* ── 데이터 로드 ── */
 function load() {
+  if (!GAS_URL || GAS_URL.indexOf('YOUR_DEPLOYED_GAS_WEBAPP_URL') >= 0) {
+    showErr('GAS_URL 값을 먼저 설정해주세요.');
+    return;
+  }
   const s = document.createElement('script');
   s.src = GAS_URL + '?callback=onData&t=' + Date.now();
   s.onerror = () => showErr('GAS 연결 실패');
@@ -229,16 +236,7 @@ function onData(d) {
     corpTotalMap = Object.keys(d.corpTotals || {}).length ? d.corpTotals : { ...CORP_TOTAL_FALLBACK };
     renderAll(d);
     document.getElementById('upd-date').textContent = d.updatedAt || '-';
-
-    const rawPeriod = (d.periodLabel || '').trim();
-    if (!rawPeriod) {
-      document.getElementById('period-label-1').textContent = '기간: -';
-    } else if (/^기간\s*:/.test(rawPeriod)) {
-      document.getElementById('period-label-1').textContent = rawPeriod;
-    } else {
-      document.getElementById('period-label-1').textContent = `기간: ${rawPeriod}`;
-    }
-
+    document.getElementById('period-label-1').textContent = d.periodLabel ? `기간: ${d.periodLabel}` : '기간: -';
     document.getElementById('loading').classList.add('hide');
   } catch(e) { showErr('렌더링 오류: ' + e.message); }
 }
@@ -249,14 +247,15 @@ function showErr(msg) {
   b.style.display = 'block'; b.textContent = '⚠️ ' + msg;
 }
 
+/* ── 전체 렌더링 ── */
 function renderAll(d) {
   renderKPI(d.kpi);
   renderDailyChart('fc', d.fcDaily || []);
   renderDailyChart('inf', d.infDaily || []);
   renderCorpTable('fc', d.fcCorps || []);
   renderCorpTable('inf', d.infCorps || []);
-  renderCorpList('fc');
-  renderCorpList('inf');
+  renderCorpList('fc', d.fcCorps || []);
+  renderCorpList('inf', d.infCorps || []);
   renderDeptChart('fc', d.fcDept || []);
   renderDeptChart('inf', d.infDept || []);
   renderDowChart('fc', (d.fcDow || {}).dow || []);
@@ -265,6 +264,7 @@ function renderAll(d) {
   renderCourses('inf', (d.infDow || {}).topCourses || []);
 }
 
+/* KPI */
 function renderKPI(k) {
   if (!k) return;
   document.getElementById('k-total').textContent = Math.round(k.totalHeadcount||0).toLocaleString() + ' 명';
@@ -272,6 +272,7 @@ function renderKPI(k) {
   document.getElementById('k-rate').textContent  = (Math.round((k.usageRate||0)*10)/10) + '%';
 }
 
+/* 일별 차트 */
 function renderDailyChart(p, data) {
   if (!data.length) return;
   const ctx = document.getElementById(p+'-daily').getContext('2d');
@@ -303,37 +304,38 @@ function renderDailyChart(p, data) {
   });
 }
 
+/* 법인 테이블 */
 function renderCorpTable(p, corps) {
   const tbody = document.getElementById(p+'-tbody');
   const tfoot = document.getElementById(p+'-tfoot');
   if (!tbody) return;
 
-  const order = Object.keys(corpTotalMap);
-  const map = {};
-  corps.forEach(c => map[c.name] = c);
-
   let sumTotal=0, sumUsers=0;
-  tbody.innerHTML = order.map(name => {
-    const c = map[name] || {};
+  tbody.innerHTML = corps.map(c => {
+    // ★ 수정: corpTotalMap(하드코딩) 대신 GAS에서 받은 c.total을 그대로 사용
     const total = c.total || 0;
     const users = c.users || 0;
     const rate  = c.rate  || (total>0 ? Math.round(users/total*1000)/10 : 0);
     sumTotal += total; sumUsers += users;
     const rc = rate>=40?'rh':rate>=20?'rm':'rl';
-    return `<tr><td class="tn">${name}</td><td>${total.toLocaleString()}</td><td>${users.toLocaleString()}</td><td class="${rc}">${rate}%</td></tr>`;
+    return `<tr><td class="tn">${c.name}</td><td>${total.toLocaleString()}</td><td>${users.toLocaleString()}</td><td class="${rc}">${rate}%</td></tr>`;
   }).join('');
 
   const sumRate = sumTotal>0 ? Math.round(sumUsers/sumTotal*1000)/10 : 0;
   tfoot.innerHTML = `<tr><td>합계</td><td>${sumTotal.toLocaleString()}</td><td>${sumUsers.toLocaleString()}</td><td>${sumRate}%</td></tr>`;
 }
 
-function renderCorpList(p) {
+/* 법인 리스트 (좌측) */
+function renderCorpList(p, corps) {
   const el = document.getElementById(p+'-corp-list');
   if (!el) return;
+  // ★ 수정: GAS에서 받은 corps 배열 순서 그대로 표시
+  const names = corps.length ? corps.map(c => c.name) : Object.keys(corpTotalMap);
   el.innerHTML = '<div class="cl-hdr">법인</div>' +
-    Object.keys(corpTotalMap).map(n => `<div class="cl-item">${n}</div>`).join('');
+    names.map(n => `<div class="cl-item">${n}</div>`).join('');
 }
 
+/* 본부별 차트 */
 function renderDeptChart(p, deptData) {
   if (!deptData.length) return;
   const ctx = document.getElementById(p+'-dept').getContext('2d');
@@ -348,7 +350,8 @@ function renderDeptChart(p, deptData) {
     data:{
       labels,
       datasets:[
-        { type:'bar', label:'누적 학습시간(H)', data:hours, backgroundColor:'rgba(96,96,116,.65)', yAxisID:'y' },
+        { type:'bar', label:'누적 학습시간(H)', data:hours,
+          backgroundColor:'rgba(96,96,116,.65)', yAxisID:'y' },
         { type:'line', label:'활성유저 수(명)', data:users,
           borderColor: isFC?'#e53935':'#00897b',
           backgroundColor: isFC?'#e53935':'#00897b',
@@ -361,12 +364,15 @@ function renderDeptChart(p, deptData) {
       scales:{
         x:{ ticks:{font:{size:7},maxRotation:45}, grid:{display:false} },
         y:{ position:'left', ticks:{font:{size:8}}, grid:{color:'rgba(0,0,0,.04)'} },
-        y2:{ position:'right', ticks:{font:{size:8},color:isFC?'#e53935':'#00897b'}, grid:{display:false} }
+        y2:{ position:'right',
+          ticks:{font:{size:8},color:isFC?'#e53935':'#00897b'},
+          grid:{display:false} }
       }
     }
   });
 }
 
+/* 요일별 차트 */
 function renderDowChart(p, dowData) {
   if (!dowData.length) return;
   const ctx = document.getElementById(p+'-dow').getContext('2d');
@@ -377,7 +383,10 @@ function renderDowChart(p, dowData) {
     type:'bar',
     data:{
       labels: dowData.map(d=>d.day),
-      datasets:[{ label:'비중(%)', data:dowData.map(d=>d.pct), backgroundColor:color, borderRadius:3 }]
+      datasets:[{
+        label:'비중(%)', data:dowData.map(d=>d.pct),
+        backgroundColor:color, borderRadius:3
+      }]
     },
     options:{
       responsive:true, maintainAspectRatio:false, animation:false,
@@ -387,7 +396,7 @@ function renderDowChart(p, dowData) {
       },
       scales:{
         x:{ ticks:{font:{size:11}}, grid:{display:false} },
-        y:{ ticks:{font:{size:9},callback:v=>v+'%'}, grid:{color:'rgba(0,0,0,.04)'} }
+        y:{ min:0, max:25, ticks:{font:{size:9},stepSize:5,callback:v=>v+'%'}, grid:{color:'rgba(0,0,0,.04)'} }
       }
     },
     plugins:[{
@@ -410,6 +419,7 @@ function renderDowChart(p, dowData) {
   });
 }
 
+/* 인기강좌 테이블 */
 function renderCourses(p, courses) {
   const tbody = document.getElementById(p+'-courses');
   if (!tbody||!courses.length) return;
