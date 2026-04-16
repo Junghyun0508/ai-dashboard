@@ -87,7 +87,7 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
 .c-table thead th{background:#1e1e32;color:#fff;padding:4px 7px;font-size:9px;font-weight:500;}
 .c-table tbody td{padding:4px 7px;border-bottom:1px solid #f2f4f6;}
 .c-table tbody tr:nth-child(odd){background:#f9fafc;}
-.c-rank{text-align:center;font-weight:700;color:#666;width:40px;}
+.c-rank{text-align:center;font-weight:700;color:#666;width:28px;}
 .c-name{max-width:260px;}
 .c-num{text-align:right;font-weight:600;white-space:nowrap;}
 .r1 .c-rank{color:#f57f17;}
@@ -182,7 +182,7 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
     <div class="dow-wrap"><canvas id="fc-dow"></canvas></div>
     <div class="ref-title">인기 강좌 순위</div>
     <table class="c-table">
-      <thead><tr><th style="white-space:nowrap">순위</th><th>코스명</th><th>학습인원(명)</th><th>총 학습시간(H)</th></tr></thead>
+      <thead><tr><th>순위</th><th>코스명</th><th>학습인원(명)</th><th>총 학습시간(H)</th></tr></thead>
       <tbody id="fc-courses"></tbody>
     </table>
   </div>
@@ -192,7 +192,7 @@ tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-we
     <div class="dow-wrap"><canvas id="inf-dow"></canvas></div>
     <div class="ref-title">인기 강좌 순위</div>
     <table class="c-table">
-      <thead><tr><th style="white-space:nowrap">순위</th><th>코스명</th><th>학습인원(명)</th><th>총 학습시간(H)</th></tr></thead>
+      <thead><tr><th>순위</th><th>코스명</th><th>학습인원(명)</th><th>총 학습시간(H)</th></tr></thead>
       <tbody id="inf-courses"></tbody>
     </table>
   </div>
@@ -297,13 +297,13 @@ function renderDailyChart(p, data) {
       plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
       scales:{
         x:{ ticks:{font:{size:8},maxRotation:0,autoSkip:false,callback:function(val,idx){
-      const label=this.getLabelForValue(val);
-      const m=label.match(/^(\d+)월\s*(\d+)일$/);
-      if(!m) return null;
-      const month=+m[1],day=+m[2];
-      if((month===9&&day===22)||day===1||day===15) return label;
-      return null;
-    }}, grid:{display:false} },
+              const label=this.getLabelForValue(val);
+              const m=label.match(/^(\d+)월\s*(\d+)일$/);
+              if(!m) return null;
+              const month=+m[1],day=+m[2];
+              if((month===9&&day===22)||day===1||day===15) return label;
+              return null;
+            }}, grid:{display:false} },
         y:{ position:'left', ticks:{font:{size:9}}, grid:{color:'rgba(0,0,0,.04)'} },
         y2:{ position:'right', ticks:{font:{size:9},color:lineColor}, grid:{display:false} }
       }
@@ -403,7 +403,7 @@ function renderDowChart(p, dowData) {
       },
       scales:{
         x:{ ticks:{font:{size:11}}, grid:{display:false} },
-        y:{ min:0, max:25, ticks:{font:{size:9}, stepSize:5, callback:v=>v+'%'}, grid:{color:'rgba(0,0,0,.04)'} }
+        y:{ min:0, max:25, ticks:{font:{size:9},stepSize:5,callback:v=>v+'%'}, grid:{color:'rgba(0,0,0,.04)'} }
       }
     },
     plugins:[{
