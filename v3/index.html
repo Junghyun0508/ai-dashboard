@@ -315,7 +315,7 @@ function renderCorpTable(p, corps) {
   let sumTotal=0, sumUsers=0;
   tbody.innerHTML = order.map(name => {
     const c = map[name] || {};
-    const total = corpTotalMap[name] || 0;
+    const total = c.total || 0;
     const users = c.users || 0;
     const rate  = c.rate  || (total>0 ? Math.round(users/total*1000)/10 : 0);
     sumTotal += total; sumUsers += users;
