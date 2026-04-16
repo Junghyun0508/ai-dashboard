@@ -236,14 +236,7 @@ function onData(d) {
     corpTotalMap = Object.keys(d.corpTotals || {}).length ? d.corpTotals : { ...CORP_TOTAL_FALLBACK };
     renderAll(d);
     document.getElementById('upd-date').textContent = d.updatedAt || '-';
-    const rawPeriod = (d.periodLabel || '').trim();
-    if (!rawPeriod) {
-      document.getElementById('period-label-1').textContent = '기간: -';
-    } else if (/^기간\s*:/.test(rawPeriod)) {
-      document.getElementById('period-label-1').textContent = rawPeriod;
-    } else {
-      document.getElementById('period-label-1').textContent = `기간: ${rawPeriod}`;
-    }
+    document.getElementById('period-label-1').textContent = d.periodLabel ? `기간: ${d.periodLabel}` : '기간: -';
     document.getElementById('loading').classList.add('hide');
   } catch(e) { showErr('렌더링 오류: ' + e.message); }
 }
@@ -317,7 +310,6 @@ function renderCorpTable(p, corps) {
   const tfoot = document.getElementById(p+'-tfoot');
   if (!tbody) return;
 
-  // 고정 순서로 정렬
   const order = Object.keys(corpTotalMap);
   const map = {};
   corps.forEach(c => map[c.name] = c);
@@ -338,7 +330,7 @@ function renderCorpTable(p, corps) {
 }
 
 /* 법인 리스트 (좌측) */
-function renderCorpList(p, corps) {
+function renderCorpList(p) {
   const el = document.getElementById(p+'-corp-list');
   if (!el) return;
   el.innerHTML = '<div class="cl-hdr">법인</div>' +
