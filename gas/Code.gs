@@ -7,7 +7,7 @@
  */
 const CONFIG = {
   spreadsheetId: '1FPiXIDJHPjd4-96MKYXoUe-9Bvu70mD37noA55dXR74',
-  cacheKey: 'ai_dashboard_payload_v6',
+  cacheKey: 'ai_dashboard_payload_v7',
   cacheTtlSec: 180,
   gidMap: {
     fDow: 361980346,
@@ -70,13 +70,15 @@ function getPayload_() {
 
   const matrices = readMatrices_();
   const kpi = extractKpi_(matrices.dashboard);
-  if (/^기간\s*:/.test(clean_(matrices.periodK7))) {
-    kpi.periodLabel = clean_(matrices.periodK7);
+  var periodFromDashboard = extractPeriodFromDashboard_(matrices.dashboard, matrices.periodHints);
+  if (periodFromDashboard) {
+    kpi.periodLabel = periodFromDashboard;
   }
 
   const fast = parsePlatform_(matrices.fPivot, matrices.fDept, matrices.fDow);
   const inf = parsePlatform_(matrices.iPivot, matrices.iDept, matrices.iDow);
   const rangeCorp = buildCorpPayloadFromDashboard_(
+    matrices.dashboard,
     matrices.fcCorpRange,
     matrices.infCorpRange
   );
@@ -166,7 +168,11 @@ function readMatrices_() {
     iDept: valuesByGid(CONFIG.gidMap.iDept),
     iPivot: valuesByGid(CONFIG.gidMap.iPivot),
     dashboard: valuesByGid(CONFIG.gidMap.dashboard),
-    periodK7: dashboardSheet ? dashboardSheet.getRange('K7').getDisplayValue() : '',
+    periodHints: dashboardSheet ? [
+      dashboardSheet.getRange('K7').getDisplayValue(),
+      dashboardSheet.getRange('K3').getDisplayValue(),
+      dashboardSheet.getRange('K44').getDisplayValue(),
+    ] : [],
     fcCorpRange: dashboardSheet ? dashboardSheet.getRange('K9:N25').getDisplayValues() : [],
     infCorpRange: dashboardSheet ? dashboardSheet.getRange('K28:N44').getDisplayValues() : [],
   };
@@ -265,14 +271,22 @@ function stripTotalSuffix_(text) {
   return clean_(text).replace(/\s*총계$/, '');
 }
 
-function extractPeriodFromDashboard_(rows) {
+function extractPeriodFromDashboard_(rows, periodHints) {
+  if (periodHints && periodHints.length) {
+    for (var h = 0; h < periodHints.length; h += 1) {
+      var hinted = clean_(periodHints[h]);
+      if (/기간\s*[:：]/.test(hinted)) {
+        return hinted;
+      }
+    }
+  }
   if (!rows || !rows.length) {
     return '';
   }
   for (var r = 0; r < rows.length; r += 1) {
     for (var c = 0; c < rows[r].length; c += 1) {
       var v = clean_(rows[r][c]);
-      if (/^기간\s*:/.test(v)) {
+      if (/기간\s*[:：]/.test(v)) {
         return v;
       }
     }
@@ -307,9 +321,72 @@ function parseCorpTableRange_(rows) {
   return out;
 }
 
-function buildCorpPayloadFromDashboard_(fcRangeRows, infRangeRows) {
-  var fcCorps = parseCorpTableRange_(fcRangeRows);
-  var infCorps = parseCorpTableRange_(infRangeRows);
+function parseCorpBlockFromDashboard_(rows, labelRegex) {
+  var out = [];
+  if (!rows || !rows.length) {
+    return out;
+  }
+
+  var startRow = -1;
+  for (var i = 0; i < rows.length; i += 1) {
+    if (findCellIndex_(rows[i], labelRegex) >= 0) {
+      startRow = i;
+      break;
+    }
+  }
+  if (startRow < 0) {
+    return out;
+  }
+
+  var started = false;
+  for (var r = startRow + 1; r < rows.length; r += 1) {
+    var row = rows[r] || [];
+    var rowText = clean_(row.join(' '));
+    if (/(패스트\s*캠퍼스|인프런|inflearn)/i.test(rowText) && started) {
+      break;
+    }
+
+    var hasCorpInRow = false;
+    for (var c = 0; c < row.length; c += 1) {
+      var name = clean_(row[c]);
+      if (!VALID_CORP_NAMES[name]) {
+        continue;
+      }
+      hasCorpInRow = true;
+      var total = Math.round(toNumber_(row[c + 1]));
+      var users = Math.round(toNumber_(row[c + 2]));
+      out.push({
+        name: name,
+        total: total,
+        users: users,
+        rate: total > 0 ? round1_(users / total * 100) : 0,
+      });
+      break;
+    }
+
+    if (hasCorpInRow) {
+      started = true;
+      continue;
+    }
+
+    if (started && !rowText) {
+      break;
+    }
+  }
+  return dedupeCorpRows_(out);
+}
+
+function buildCorpPayloadFromDashboard_(dashboardRows, fcRangeRows, infRangeRows) {
+  var fcCorps = parseCorpBlockFromDashboard_(dashboardRows, /(패스트\s*캠퍼스|fast)/i);
+  var infCorps = parseCorpBlockFromDashboard_(dashboardRows, /(인프런|inflearn)/i);
+
+  if (fcCorps.length < 10) {
+    fcCorps = parseCorpTableRange_(fcRangeRows);
+  }
+  if (infCorps.length < 10) {
+    infCorps = parseCorpTableRange_(infRangeRows);
+  }
+
   var corpTotals = {};
 
   fcCorps.forEach(function (r) {
@@ -326,6 +403,28 @@ function buildCorpPayloadFromDashboard_(fcRangeRows, infRangeRows) {
     infCorps: infCorps,
     corpTotals: corpTotals,
   };
+}
+
+function dedupeCorpRows_(rows) {
+  var byName = {};
+  (rows || []).forEach(function (r) {
+    if (!r || !VALID_CORP_NAMES[r.name]) {
+      return;
+    }
+    var prev = byName[r.name];
+    if (!prev) {
+      byName[r.name] = r;
+      return;
+    }
+    // Prefer the row with larger totals/users when duplicates exist.
+    if ((r.total || 0) + (r.users || 0) > (prev.total || 0) + (prev.users || 0)) {
+      byName[r.name] = r;
+    }
+  });
+
+  return Object.keys(VALID_CORP_NAMES)
+    .filter(function (name) { return !!byName[name]; })
+    .map(function (name) { return byName[name]; });
 }
 
 function parseDeptRows_(rows) {
@@ -637,6 +736,15 @@ function unique_(listOfLists) {
   return Object.keys(s);
 }
 
+function findCellIndex_(row, regex) {
+  for (var i = 0; i < row.length; i += 1) {
+    if (regex.test(clean_(row[i]))) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 function findHeaderIndex_(header, regex, fallback) {
   for (var i = 0; i < header.length; i += 1) {
     if (regex.test(clean_(header[i]))) {
@@ -696,9 +804,9 @@ function testCorpUsers() {
 
 function testDashboardCorpRanges() {
   var m = readMatrices_();
-  var parsed = buildCorpPayloadFromDashboard_(m.fcCorpRange, m.infCorpRange);
+  var parsed = buildCorpPayloadFromDashboard_(m.dashboard, m.fcCorpRange, m.infCorpRange);
   throw new Error(
-    'K7=' + JSON.stringify(m.periodK7) +
+    'periodHints=' + JSON.stringify(m.periodHints) +
     ' | FC(K9:N25)=' + JSON.stringify(parsed.fcCorps) +
     ' | INF(K28:N44)=' + JSON.stringify(parsed.infCorps)
   );
