@@ -236,7 +236,14 @@ function onData(d) {
     corpTotalMap = Object.keys(d.corpTotals || {}).length ? d.corpTotals : { ...CORP_TOTAL_FALLBACK };
     renderAll(d);
     document.getElementById('upd-date').textContent = d.updatedAt || '-';
-    document.getElementById('period-label-1').textContent = d.periodLabel ? `기간: ${d.periodLabel}` : '기간: -';
+    const rawPeriod = (d.periodLabel || '').trim();
+    if (!rawPeriod) {
+      document.getElementById('period-label-1').textContent = '기간: -';
+    } else if (/^기간\s*:/.test(rawPeriod)) {
+      document.getElementById('period-label-1').textContent = rawPeriod;
+    } else {
+      document.getElementById('period-label-1').textContent = `기간: ${rawPeriod}`;
+    }
     document.getElementById('loading').classList.add('hide');
   } catch(e) { showErr('렌더링 오류: ' + e.message); }
 }

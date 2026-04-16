@@ -7,7 +7,7 @@
  */
 const CONFIG = {
   spreadsheetId: '1FPiXIDJHPjd4-96MKYXoUe-9Bvu70mD37noA55dXR74',
-  cacheKey: 'ai_dashboard_payload_v2',
+  cacheKey: 'ai_dashboard_payload_v6',
   cacheTtlSec: 180,
   gidMap: {
     fDow: 361980346,
@@ -156,9 +156,11 @@ function parseDailyTrend_(rows) {
 }
 
 function parseCorpUsers_(rows) {
-  var map = {};
+  var totals = {};
+  var deptSums = {};
+  var headerCandidates = {};
   if (!rows || rows.length < 2) {
-    return map;
+    return {};
   }
   var currentCorp = '';
   for (var i = 1; i < rows.length; i += 1) {
@@ -168,14 +170,60 @@ function parseCorpUsers_(rows) {
     if (corp) {
       currentCorp = corp;
     }
-    if (!currentCorp || isTotalLabel_(currentCorp)) {
+    if (!currentCorp) {
       continue;
     }
-    if (!dept) {
-      map[currentCorp] = users;
+
+    // Prefer pivot total rows such as "KRAFTON HQ 총계"
+    var totalBase = stripTotalSuffix_(currentCorp);
+    if (totalBase !== currentCorp) {
+      totals[totalBase] = users;
+      continue;
+    }
+
+    if (dept) {
+      deptSums[currentCorp] = (deptSums[currentCorp] || 0) + users;
+      continue;
+    }
+
+    // Group header row (dept empty): keep as fallback only.
+    if (!isTotalLabel_(currentCorp)) {
+      headerCandidates[currentCorp] = Math.max(headerCandidates[currentCorp] || 0, users);
     }
   }
-  return map;
+
+  var result = {};
+  var corpNames = unique_([
+    Object.keys(totals),
+    Object.keys(deptSums),
+    Object.keys(headerCandidates),
+  ]);
+
+  corpNames.forEach(function (name) {
+    if (totals[name] !== undefined) {
+      result[name] = totals[name];
+      return;
+    }
+    if (deptSums[name] !== undefined && deptSums[name] > 0) {
+      result[name] = deptSums[name];
+      return;
+    }
+    result[name] = headerCandidates[name] || 0;
+  });
+
+  return result;
+}
+
+function stripTotalSuffix_(text) {
+  return clean_(text).replace(/\s*총계$/, '');
+}
+
+function extractPeriodFromDashboard_(rows) {
+  // Dashboard tab fixed cell: K7 (1-indexed)
+  if (!rows || rows.length < 7) {
+    return '';
+  }
+  return clean_((rows[6] || [])[10]);
 }
 
 function parseDeptRows_(rows) {
@@ -309,7 +357,7 @@ function extractKpi_(rows) {
   var total = findLabeledValue_(rows, /(대상\s*총원|대상총원|총원)/i);
   var users = findLabeledValue_(rows, /(수강인원|학습인원|이용인원)/i);
   var rate = findLabeledValue_(rows, /(사용률|활용률|참여율)/i);
-  var period = findLabeledValue_(rows, /(기간)/i);
+  var period = extractPeriodFromDashboard_(rows) || findLabeledValue_(rows, /(기간)/i);
 
   result.updatedAt = clean_(upd);
   result.periodLabel = clean_(period);
@@ -525,4 +573,21 @@ function formatPivotDayLabel_(value) {
     return s;
   }
   return month + '월 ' + day + '일';
+}
+
+// Manual test functions in Apps Script editor.
+function testInfDow() {
+  var rows = readMatrices_().iDow;
+  var result = parseDow_(rows);
+  throw new Error('INF DOW = ' + JSON.stringify(result));
+}
+
+function testCorpUsers() {
+  var m = readMatrices_();
+  var fcMap = parseCorpUsers_(m.fDept);
+  var infMap = parseCorpUsers_(m.iDept);
+  throw new Error(
+    'FC users=' + JSON.stringify(fcMap) +
+    ' | INF users=' + JSON.stringify(infMap)
+  );
 }
