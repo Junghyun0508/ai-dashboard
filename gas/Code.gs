@@ -703,3 +703,42 @@ function testDashboardCorpRanges() {
     ' | INF(K28:N44)=' + JSON.stringify(parsed.infCorps)
   );
 }
+
+// Detailed debug for Inflearn day-of-week chart source.
+function testInfDowDebug() {
+  var rows = readMatrices_().iDow || [];
+  if (!rows.length) {
+    throw new Error('iDow sheet rows are empty');
+  }
+
+  var header = rows[0] || [];
+  var dayHoursCol = findHeaderIndex_(header, /(접속요일)/i, 5);
+  var hoursCol = findNextHeaderIndex_(header, dayHoursCol, /(학습시간|hours)/i, 6);
+  var dayPctCol = findHeaderIndex_(header, /(행\s*레이블)/i, 8);
+  var pctCol = findNextHeaderIndex_(header, dayPctCol, /(비율|합계|rate|percent|%)/i, 9);
+
+  var parsed = parseDow_(rows);
+  var sample = [];
+  for (var i = 1; i < Math.min(rows.length, 12); i += 1) {
+    sample.push({
+      row: i + 1,
+      dayLabelCell: clean_(rows[i][dayPctCol]),
+      pctCell: clean_(rows[i][pctCol]),
+      dayHoursCell: clean_(rows[i][dayHoursCol]),
+      hoursCell: clean_(rows[i][hoursCol]),
+    });
+  }
+
+  throw new Error(
+    'INF_DOW_DEBUG'
+    + '\nheader=' + JSON.stringify(header)
+    + '\ncols=' + JSON.stringify({
+      dayHoursCol: dayHoursCol,
+      hoursCol: hoursCol,
+      dayPctCol: dayPctCol,
+      pctCol: pctCol,
+    })
+    + '\nparsed=' + JSON.stringify(parsed)
+    + '\nsample=' + JSON.stringify(sample)
+  );
+}
