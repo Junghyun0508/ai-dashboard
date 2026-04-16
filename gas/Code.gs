@@ -20,6 +20,24 @@ const CONFIG = {
   },
 };
 
+const VALID_CORP_NAMES = {
+  'KRAFTON HQ': true,
+  'PUBG STUDIOS': true,
+  'bluehole studio': true,
+  'inZOI studio': true,
+  '5minlab': true,
+  'Rising Wings': true,
+  'OVERDARE': true,
+  'Omni Craftlabs': true,
+  'Flyway Games': true,
+  'ReLU Games': true,
+  'Dreamotion': true,
+  'JOFSOFT': true,
+  'Loonshot Games': true,
+  'Olivetree Games': true,
+  '기타(해외파견)': true,
+};
+
 function doGet(e) {
   const callback = e && e.parameter ? String(e.parameter.callback || '') : '';
   try {
@@ -52,19 +70,43 @@ function getPayload_() {
 
   const matrices = readMatrices_();
   const kpi = extractKpi_(matrices.dashboard);
-  const corpTotals = extractCorpTotals_(matrices.dashboard);
+  if (/^기간\s*:/.test(clean_(matrices.periodK7))) {
+    kpi.periodLabel = clean_(matrices.periodK7);
+  }
 
   const fast = parsePlatform_(matrices.fPivot, matrices.fDept, matrices.fDow);
   const inf = parsePlatform_(matrices.iPivot, matrices.iDept, matrices.iDow);
+  const rangeCorp = buildCorpPayloadFromDashboard_(
+    matrices.fcCorpRange,
+    matrices.infCorpRange
+  );
 
-  const corpNames = unique_([
-    Object.keys(corpTotals),
-    Object.keys(fast.corpUsers),
-    Object.keys(inf.corpUsers),
-  ]);
+  let corpTotals = rangeCorp.corpTotals;
+  let fcCorps = rangeCorp.fcCorps;
+  let infCorps = rangeCorp.infCorps;
 
-  const fcCorps = buildCorpRows_(corpNames, corpTotals, fast.corpUsers);
-  const infCorps = buildCorpRows_(corpNames, corpTotals, inf.corpUsers);
+  // Fallback to pivot-derived corp metrics when dashboard ranges are empty.
+  if (
+    fcCorps.length < 10 ||
+    infCorps.length < 10 ||
+    Object.keys(corpTotals).length < 10
+  ) {
+    const fallbackTotals = extractCorpTotals_(matrices.dashboard);
+    const corpNames = unique_([
+      Object.keys(fallbackTotals),
+      Object.keys(fast.corpUsers),
+      Object.keys(inf.corpUsers),
+    ]);
+    if (fcCorps.length < 10) {
+      fcCorps = buildCorpRows_(corpNames, fallbackTotals, fast.corpUsers);
+    }
+    if (infCorps.length < 10) {
+      infCorps = buildCorpRows_(corpNames, fallbackTotals, inf.corpUsers);
+    }
+    if (Object.keys(corpTotals).length < 10) {
+      corpTotals = fallbackTotals;
+    }
+  }
 
   const totalHeadcount = kpi.totalHeadcount || sum_(Object.keys(corpTotals).map(function (name) {
     return corpTotals[name];
@@ -114,6 +156,8 @@ function readMatrices_() {
     return sheet ? sheet.getDataRange().getDisplayValues() : [];
   }
 
+  const dashboardSheet = byId[CONFIG.gidMap.dashboard];
+
   return {
     fDow: valuesByGid(CONFIG.gidMap.fDow),
     fDept: valuesByGid(CONFIG.gidMap.fDept),
@@ -122,6 +166,9 @@ function readMatrices_() {
     iDept: valuesByGid(CONFIG.gidMap.iDept),
     iPivot: valuesByGid(CONFIG.gidMap.iPivot),
     dashboard: valuesByGid(CONFIG.gidMap.dashboard),
+    periodK7: dashboardSheet ? dashboardSheet.getRange('K7').getDisplayValue() : '',
+    fcCorpRange: dashboardSheet ? dashboardSheet.getRange('K9:N25').getDisplayValues() : [],
+    infCorpRange: dashboardSheet ? dashboardSheet.getRange('K28:N44').getDisplayValues() : [],
   };
 }
 
@@ -219,11 +266,66 @@ function stripTotalSuffix_(text) {
 }
 
 function extractPeriodFromDashboard_(rows) {
-  // Dashboard tab fixed cell: K7 (1-indexed)
-  if (!rows || rows.length < 7) {
+  if (!rows || !rows.length) {
     return '';
   }
-  return clean_((rows[6] || [])[10]);
+  for (var r = 0; r < rows.length; r += 1) {
+    for (var c = 0; c < rows[r].length; c += 1) {
+      var v = clean_(rows[r][c]);
+      if (/^기간\s*:/.test(v)) {
+        return v;
+      }
+    }
+  }
+  return '';
+}
+
+function parseCorpTableRange_(rows) {
+  var out = [];
+  if (!rows || !rows.length) {
+    return out;
+  }
+  rows.forEach(function (row) {
+    var name = clean_(row[0]);
+    if (
+      !name ||
+      /소속/.test(name) ||
+      isTotalLabel_(name) ||
+      !VALID_CORP_NAMES[name]
+    ) {
+      return;
+    }
+    var total = Math.round(toNumber_(row[1]));
+    var users = Math.round(toNumber_(row[2]));
+    out.push({
+      name: name,
+      total: total,
+      users: users,
+      rate: total > 0 ? round1_(users / total * 100) : 0,
+    });
+  });
+  return out;
+}
+
+function buildCorpPayloadFromDashboard_(fcRangeRows, infRangeRows) {
+  var fcCorps = parseCorpTableRange_(fcRangeRows);
+  var infCorps = parseCorpTableRange_(infRangeRows);
+  var corpTotals = {};
+
+  fcCorps.forEach(function (r) {
+    corpTotals[r.name] = r.total;
+  });
+  infCorps.forEach(function (r) {
+    if (corpTotals[r.name] === undefined || corpTotals[r.name] === 0) {
+      corpTotals[r.name] = r.total;
+    }
+  });
+
+  return {
+    fcCorps: fcCorps,
+    infCorps: infCorps,
+    corpTotals: corpTotals,
+  };
 }
 
 function parseDeptRows_(rows) {
@@ -589,5 +691,15 @@ function testCorpUsers() {
   throw new Error(
     'FC users=' + JSON.stringify(fcMap) +
     ' | INF users=' + JSON.stringify(infMap)
+  );
+}
+
+function testDashboardCorpRanges() {
+  var m = readMatrices_();
+  var parsed = buildCorpPayloadFromDashboard_(m.fcCorpRange, m.infCorpRange);
+  throw new Error(
+    'K7=' + JSON.stringify(m.periodK7) +
+    ' | FC(K9:N25)=' + JSON.stringify(parsed.fcCorps) +
+    ' | INF(K28:N44)=' + JSON.stringify(parsed.infCorps)
   );
 }
