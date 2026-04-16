@@ -5,768 +5,420 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 역량강화 교육 이용 현황</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0e1a; --surface: #111827; --surface2: #1a2235;
-    --border: rgba(99,179,237,0.12); --accent: #3b82f6; --accent2: #06b6d4;
-    --accent3: #8b5cf6; --fc-color: #f59e0b; --inf-color: #10b981;
-    --text: #e2e8f0; --muted: #64748b; --highlight: #60a5fa;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-serif; min-height:100vh; overflow-x:hidden; }
-  body::before {
-    content:''; position:fixed; inset:0;
-    background-image: linear-gradient(rgba(59,130,246,0.04) 1px,transparent 1px), linear-gradient(90deg,rgba(59,130,246,0.04) 1px,transparent 1px);
-    background-size:40px 40px; pointer-events:none; z-index:0;
-  }
-  .container { max-width:1440px; margin:0 auto; padding:32px 28px; position:relative; z-index:1; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:#eef0f3;color:#1a1a2e;font-size:12px;}
 
-  /* LOADING */
-  #loadingScreen { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:999; transition:opacity .5s; }
-  #loadingScreen.hidden { opacity:0; pointer-events:none; }
-  .spinner { width:44px; height:44px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin-bottom:18px; }
-  @keyframes spin { to { transform:rotate(360deg) } }
-  .loading-text { font-size:14px; color:var(--muted); }
-  .loading-sub { font-size:12px; color:var(--surface2); margin-top:6px; font-family:'Space Mono',monospace; }
+/* 로딩 */
+#loading{position:fixed;inset:0;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s;}
+#loading.hide{opacity:0;pointer-events:none;}
+.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:#4CAF50;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:14px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{color:#aaa;font-size:13px;}
+#err{display:none;background:#fff3cd;border:1px solid #ffc107;padding:8px 14px;margin:6px 16px;border-radius:4px;font-size:12px;color:#856404;}
 
-  /* ERROR */
-  #errorBanner { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); border-radius:10px; padding:14px 18px; margin-bottom:16px; display:none; align-items:center; gap:10px; font-size:13px; }
-  #errorBanner.show { display:flex; }
-  .err-retry { margin-left:auto; padding:5px 14px; border-radius:6px; border:1px solid rgba(239,68,68,.4); background:transparent; color:#f87171; font-size:12px; cursor:pointer; font-family:'Noto Sans KR',sans-serif; }
+/* 헤더 */
+.top-header{background:#1e1e32;color:#fff;padding:8px 16px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,.4);}
+.top-header h1{font-size:15px;font-weight:700;white-space:nowrap;}
+.upd{font-size:11px;color:#aaa;white-space:nowrap;}
+.upd span{color:#4fc3f7;font-weight:600;}
+.kpi-bar{display:flex;gap:10px;margin-left:auto;}
+.kpi-chip{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:5px;padding:4px 12px;text-align:center;min-width:90px;}
+.kpi-chip .lbl{font-size:9px;color:#aaa;}
+.kpi-chip .val{font-size:13px;font-weight:700;color:#fff;}
+.kpi-chip .val.g{color:#4CAF50;}
+.hdr-note{font-size:9px;color:#888;line-height:1.5;white-space:nowrap;}
 
-  /* HEADER */
-  .header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:36px; gap:24px; flex-wrap:wrap; }
-  .header-title { display:flex; align-items:center; gap:16px; }
-  .header-icon { width:52px; height:52px; background:linear-gradient(135deg,var(--accent),var(--accent3)); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 0 24px rgba(59,130,246,0.4); }
-  h1 { font-size:22px; font-weight:700; color:#fff; line-height:1.3; }
-  h1 span { display:block; font-size:13px; font-weight:400; color:var(--muted); margin-top:3px; font-family:'Space Mono',monospace; }
-  .header-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
-  .update-badge { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 18px; font-size:12px; color:var(--muted); font-family:'Space Mono',monospace; white-space:nowrap; }
-  .update-badge b { color:var(--highlight); }
-  .refresh-btn { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:12px; cursor:pointer; font-family:'Noto Sans KR',sans-serif; transition:all .2s; display:flex; align-items:center; gap:6px; }
-  .refresh-btn:hover { border-color:var(--accent); color:var(--accent); }
-  .refresh-spin { animation:spin .8s linear infinite; display:inline-block; }
+/* 섹션 타이틀 */
+.sec-title{background:#2c2c4a;color:#fff;padding:7px 14px;font-size:12px;font-weight:600;border-left:3px solid #4CAF50;margin-bottom:4px;}
+.sec-title.blue{border-left-color:#4fc3f7;}
+.sec-title.purple{border-left-color:#9c27b0;}
+.sec-title .dr{font-size:10px;font-weight:400;color:#aaa;margin-left:10px;}
 
-  /* FILTER PANEL */
-  .filter-panel { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px 20px; margin-bottom:20px; }
-  .filter-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
-  .filter-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--accent2); display:flex; align-items:center; gap:6px; }
-  .filter-actions { display:flex; gap:8px; }
-  .filter-btn { padding:4px 12px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:11px; cursor:pointer; font-family:'Noto Sans KR',sans-serif; transition:all .2s; }
-  .filter-btn:hover { border-color:var(--accent); color:var(--accent); }
-  .corp-chips { display:flex; flex-wrap:wrap; gap:7px; }
-  .chip { padding:5px 14px; border-radius:99px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:12px; cursor:pointer; transition:all .2s; font-family:'Noto Sans KR',sans-serif; white-space:nowrap; }
-  .chip:hover { border-color:var(--accent); color:var(--accent); }
-  .chip.active { background:rgba(59,130,246,.15); border-color:var(--accent); color:var(--accent); font-weight:700; }
+/* 페이지 */
+.page{max-width:1440px;margin:0 auto;padding:10px 14px;}
 
-  /* PLATFORM TABS */
-  .tab-row { display:flex; margin-bottom:20px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:3px; width:fit-content; }
-  .tab-btn { padding:7px 22px; border-radius:8px; border:none; background:transparent; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; font-family:'Noto Sans KR',sans-serif; transition:all .2s; }
-  .tab-btn.active { background:var(--surface); color:#fff; box-shadow:0 1px 6px rgba(0,0,0,.4); }
-  .tab-btn.tab-fast.active { color:var(--fc-color); }
-  .tab-btn.tab-inf.active { color:var(--inf-color); }
-  .tab-btn.tab-both.active { color:var(--highlight); }
+/* 섹션1 그리드: 법인목록 | 차트 | 테이블 */
+.s1-row{display:grid;grid-template-columns:160px 1fr 270px;background:#fff;border:1px solid #d8dce2;border-radius:5px;overflow:hidden;margin-bottom:8px;}
 
-  /* KPI */
-  .kpi-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
-  .kpi { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px 24px; position:relative; overflow:hidden; transition:border-color .2s; }
-  .kpi:hover { border-color:var(--accent); }
-  .kpi::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
-  .kpi.green::before { background:linear-gradient(90deg,var(--inf-color),#34d399); }
-  .kpi.amber::before { background:linear-gradient(90deg,var(--fc-color),#fcd34d); }
-  .kpi.purple::before { background:linear-gradient(90deg,var(--accent3),#c4b5fd); }
-  .kpi-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; }
-  .kpi-value { font-size:36px; font-weight:900; color:#fff; font-family:'Space Mono',monospace; line-height:1; }
-  .kpi-sub { font-size:12px; color:var(--muted); margin-top:8px; }
-  .kpi-sub b { color:var(--highlight); }
-  .kpi-badge { position:absolute; top:18px; right:18px; font-size:22px; opacity:.25; }
+/* 법인 목록 */
+.corp-list{background:#1e1e32;overflow-y:auto;max-height:290px;}
+.corp-list .cl-hdr{padding:5px 10px;font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid rgba(255,255,255,.05);}
+.corp-list .cl-item{padding:4px 10px;font-size:10px;color:#bbb;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-  /* SECTION LABEL */
-  .section-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:var(--accent2); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
-  .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+/* 차트 영역 */
+.chart-area{padding:10px 14px;border-left:1px solid #eee;}
+.plat-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.fc-badge{font-size:14px;font-weight:900;color:#ff5722;letter-spacing:-1px;}
+.inf-badge{font-size:14px;font-weight:900;color:#1dc078;}
+.legend{display:flex;gap:14px;margin-bottom:6px;font-size:10px;}
+.leg{display:flex;align-items:center;gap:4px;}
+.leg-dot{width:10px;height:10px;border-radius:50%;}
+.leg-line{width:16px;height:2px;border-radius:1px;}
+.chart-wrap{position:relative;height:210px;}
 
-  /* GRID */
-  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
-  .grid-2-1 { display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-bottom:24px; }
+/* 법인 테이블 */
+.corp-tbl-wrap{border-left:1px solid #eee;overflow-y:auto;max-height:290px;}
+table{width:100%;border-collapse:collapse;font-size:10px;}
+thead th{background:#1e1e32;color:#fff;padding:5px 7px;text-align:center;position:sticky;top:0;font-size:9px;font-weight:500;}
+tbody td{padding:4px 7px;border-bottom:1px solid #f2f4f6;text-align:center;}
+tbody tr:nth-child(even){background:#f9fafc;}
+tbody tr:hover{background:#e8f5e9;}
+.tn{text-align:left;font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rh{color:#2e7d32;font-weight:600;}
+.rm{color:#e65100;font-weight:600;}
+.rl{color:#c62828;font-weight:600;}
+tfoot td{background:#1e1e32;color:#fff;padding:4px 7px;text-align:center;font-weight:700;}
 
-  /* CARD */
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px; position:relative; overflow:hidden; }
-  .card-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:18px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .card-title .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); flex-shrink:0; }
-  .card-title .dot.green { background:var(--inf-color); }
-  .card-title .dot.amber { background:var(--fc-color); }
-  .card-title .dot.purple { background:var(--accent3); }
+/* 섹션2 */
+.s2-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.dept-card{background:#fff;border:1px solid #d8dce2;border-radius:5px;padding:10px 14px;}
+.dept-wrap{position:relative;height:200px;}
 
-  /* ENTITY TABLE */
-  .entity-table { width:100%; border-collapse:collapse; font-size:12px; }
-  .entity-table th { text-align:left; color:var(--muted); font-weight:500; padding:6px 8px; border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
-  .entity-table td { padding:8px 8px; border-bottom:1px solid rgba(99,179,237,0.05); vertical-align:middle; }
-  .entity-table tr:last-child td { border-bottom:none; }
-  .entity-table tr:hover td { background:rgba(59,130,246,0.05); }
-  .entity-name { font-weight:500; color:var(--text); }
-  .rate-bar-wrap { width:80px; }
-  .rate-bar { height:6px; border-radius:3px; background:rgba(99,179,237,0.12); overflow:hidden; }
-  .rate-bar-fill { height:100%; border-radius:3px; transition:width .6s ease; }
-  .rate-val { color:var(--highlight); font-weight:700; font-family:'Space Mono',monospace; font-size:11px; }
-  .total-row td { background:rgba(59,130,246,0.08); font-weight:700; color:#fff; }
+/* 섹션3 */
+.s3-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.ref-card{background:#fff;border:1px solid #d8dce2;border-radius:5px;padding:10px 14px;}
+.ref-title{font-size:11px;font-weight:600;color:#333;text-align:center;margin-bottom:8px;}
+.dow-wrap{position:relative;height:150px;margin-bottom:14px;}
 
-  /* COURSE LIST */
-  .course-list { display:flex; flex-direction:column; gap:8px; }
-  .course-item { display:flex; align-items:center; gap:10px; padding:9px 12px; background:var(--surface2); border-radius:10px; border:1px solid transparent; transition:border-color .2s; }
-  .course-item:hover { border-color:var(--border); }
-  .course-rank { width:22px; height:22px; border-radius:6px; background:rgba(59,130,246,0.15); color:var(--accent); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'Space Mono',monospace; }
-  .course-rank.top3 { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; }
-  .course-name { flex:1; font-size:11px; color:var(--text); line-height:1.4; }
-  .course-count { font-size:13px; font-weight:700; color:#fff; font-family:'Space Mono',monospace; flex-shrink:0; }
-  .course-count span { font-size:10px; color:var(--muted); font-family:'Noto Sans KR'; font-weight:400; }
-
-  /* DAY BARS */
-  .day-bars { display:flex; gap:8px; align-items:flex-end; height:120px; }
-  .day-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; height:100%; justify-content:flex-end; }
-  .day-bar-inner { width:100%; border-radius:5px 5px 0 0; transition:opacity .2s; min-width:24px; }
-  .day-label { font-size:11px; color:var(--muted); }
-  .day-value { font-size:9px; color:var(--muted); font-family:'Space Mono',monospace; }
-
-  /* CAT BARS */
-  .cat-list { display:flex; flex-direction:column; gap:8px; }
-  .cat-item { display:flex; align-items:center; gap:10px; }
-  .cat-name { width:100px; font-size:11px; color:var(--muted); flex-shrink:0; text-align:right; }
-  .cat-bar-wrap { flex:1; height:7px; background:rgba(99,179,237,0.1); border-radius:4px; overflow:hidden; }
-  .cat-bar { height:100%; border-radius:4px; transition:width .7s ease; }
-  .cat-val { width:36px; text-align:right; font-size:11px; color:var(--text); font-family:'Space Mono',monospace; flex-shrink:0; }
-
-  /* PLATFORM PILLS */
-  .platform-pills { display:flex; gap:10px; margin-bottom:18px; }
-  .platform-pill { flex:1; padding:12px; border-radius:12px; border:1px solid var(--border); text-align:center; }
-  .platform-pill.fc { border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.05); }
-  .platform-pill.inf { border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.05); }
-  .platform-pill .name { font-size:10px; color:var(--muted); margin-bottom:5px; }
-  .platform-pill .val { font-size:20px; font-weight:900; font-family:'Space Mono',monospace; }
-  .platform-pill.fc .val { color:var(--fc-color); }
-  .platform-pill.inf .val { color:var(--inf-color); }
-  .platform-pill .sub { font-size:10px; color:var(--muted); margin-top:3px; }
-
-  .footnote { font-size:11px; color:var(--muted); line-height:1.7; margin-top:24px; padding:16px 20px; background:var(--surface); border-radius:12px; border-left:3px solid var(--accent); }
-  .footnote b { color:var(--text); }
-  .empty { text-align:center; padding:30px; color:var(--muted); font-size:12px; }
-
-  canvas { display:block; }
-  @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
-  .kpi { animation:fadeUp .5s ease both; }
-  .kpi:nth-child(1){animation-delay:.05s} .kpi:nth-child(2){animation-delay:.10s}
-  .kpi:nth-child(3){animation-delay:.15s} .kpi:nth-child(4){animation-delay:.20s}
-  @media(max-width:900px){.kpi-strip{grid-template-columns:repeat(2,1fr)}.grid-2,.grid-2-1{grid-template-columns:1fr}}
+/* 인기강좌 */
+.c-table{width:100%;border-collapse:collapse;font-size:10px;}
+.c-table thead th{background:#1e1e32;color:#fff;padding:4px 7px;font-size:9px;font-weight:500;}
+.c-table tbody td{padding:4px 7px;border-bottom:1px solid #f2f4f6;}
+.c-table tbody tr:nth-child(odd){background:#f9fafc;}
+.c-rank{text-align:center;font-weight:700;color:#666;width:28px;}
+.c-name{max-width:260px;}
+.c-num{text-align:right;font-weight:600;white-space:nowrap;}
+.r1 .c-rank{color:#f57f17;}
+.r2 .c-rank{color:#757575;}
+.r3 .c-rank{color:#8d6e63;}
 </style>
 </head>
 <body>
 
-<!-- LOADING -->
-<div id="loadingScreen">
+<div id="loading">
   <div class="spinner"></div>
-  <div class="loading-text">구글 시트에서 데이터를 불러오는 중...</div>
-  <div class="loading-sub" id="loadingSub">잠시만 기다려주세요</div>
+  <p>데이터를 불러오는 중...</p>
+</div>
+<div id="err"></div>
+
+<!-- 헤더 -->
+<div class="top-header">
+  <h1>🤖 AI 역량강화 교육 이용 현황</h1>
+  <div class="upd">update : <span id="upd-date">-</span></div>
+  <div class="kpi-bar">
+    <div class="kpi-chip"><div class="lbl">대상총원*(명)</div><div class="val" id="k-total">-</div></div>
+    <div class="kpi-chip"><div class="lbl">수강인원**(명)</div><div class="val" id="k-users">-</div></div>
+    <div class="kpi-chip"><div class="lbl">사용률(%)</div><div class="val g" id="k-rate">-</div></div>
+  </div>
+  <div class="hdr-note">*국내 재직중인 KRAFTON HQ, KR Studios, Beyond the Game 구성원<br>**본 제도를 1회이상 사용한 인원</div>
 </div>
 
-<div class="container">
+<div class="page">
 
-  <!-- ERROR -->
-  <div id="errorBanner">
-    <span>⚠️</span>
-    <span id="errorMsg">데이터를 불러오지 못했습니다.</span>
-    <button class="err-retry" onclick="loadData()">다시 시도</button>
+<!-- 섹션1 -->
+<div class="sec-title">①법인&기간별 이용 현황 <span class="dr" id="period-label-1">기간: -</span></div>
+
+<!-- FC 행 -->
+<div class="s1-row">
+  <div class="corp-list" id="fc-corp-list"><div class="cl-hdr">법인</div></div>
+  <div class="chart-area">
+    <div class="plat-hdr"><span class="fc-badge">Fast campus</span></div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#ef9a9a"></div><span>합계 : 학습시간(H)</span></div>
+      <div class="leg"><div class="leg-line" style="background:#e53935"></div><span>합계 : 수강인원(명)</span></div>
+    </div>
+    <div class="chart-wrap"><canvas id="fc-daily"></canvas></div>
   </div>
-
-  <!-- HEADER -->
-  <div class="header">
-    <div class="header-title">
-      <div class="header-icon">🤖</div>
-      <div>
-        <h1>AI 역량강화 교육 이용 현황
-          <span>KRAFTON AI Learning Platform Dashboard</span>
-        </h1>
-      </div>
-    </div>
-    <div class="header-right">
-      <div class="update-badge">기간: 2025-09-22 런칭 ~ <b id="updateDate">—</b></div>
-      <button class="refresh-btn" onclick="loadData()">
-        <span id="refreshIcon">↻</span> 데이터 새로고침
-      </button>
-    </div>
+  <div class="corp-tbl-wrap">
+    <table><thead><tr><th class="tn">소속</th><th>총원</th><th>수강인원</th><th>사용률</th></tr></thead>
+    <tbody id="fc-tbody"></tbody><tfoot id="fc-tfoot"></tfoot></table>
   </div>
+</div>
 
-  <!-- FILTER -->
-  <div class="filter-panel">
-    <div class="filter-header">
-      <div class="filter-title">🏢 법인 필터</div>
-      <div class="filter-actions">
-        <button class="filter-btn" onclick="selectAll()">전체 선택</button>
-        <button class="filter-btn" onclick="clearAll()">전체 해제</button>
-      </div>
+<!-- INF 행 -->
+<div class="s1-row" style="margin-top:8px;">
+  <div class="corp-list" id="inf-corp-list"><div class="cl-hdr">법인</div></div>
+  <div class="chart-area">
+    <div class="plat-hdr"><span class="inf-badge">inflearn</span></div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#80cbc4"></div><span>합계 : 학습시간(H)</span></div>
+      <div class="leg"><div class="leg-line" style="background:#00897b"></div><span>합계 : 수강인원(명)</span></div>
     </div>
-    <div class="corp-chips" id="corpChips"></div>
+    <div class="chart-wrap"><canvas id="inf-daily"></canvas></div>
   </div>
-
-  <!-- TABS -->
-  <div class="tab-row">
-    <button class="tab-btn tab-both active" onclick="setTab('both')">전체</button>
-    <button class="tab-btn tab-fast" onclick="setTab('fast')">패스트캠퍼스</button>
-    <button class="tab-btn tab-inf" onclick="setTab('inf')">인프런</button>
+  <div class="corp-tbl-wrap">
+    <table><thead><tr><th class="tn">소속</th><th>총원</th><th>수강인원</th><th>사용률</th></tr></thead>
+    <tbody id="inf-tbody"></tbody><tfoot id="inf-tfoot"></tfoot></table>
   </div>
+</div>
 
-  <!-- KPI -->
-  <div class="kpi-strip">
-    <div class="kpi">
-      <div class="kpi-badge">👥</div>
-      <div class="kpi-label">대상 총원 (A)</div>
-      <div class="kpi-value" id="kpiTotal">—</div>
-      <div class="kpi-sub" id="kpiTotalSub">국내 재직 구성원</div>
+<!-- 섹션2 -->
+<div class="sec-title blue" style="margin-top:10px;">②KRAFTON, Inc. 본부별 이용현황</div>
+<div class="s2-grid">
+  <div class="dept-card">
+    <div class="plat-hdr">
+      <span class="fc-badge">Fast campus</span>
+      <span style="font-size:10px;color:#888;margin-left:6px;">— 누적 학습시간(H) &nbsp; ● 활성유저 수(명)</span>
     </div>
-    <div class="kpi green">
-      <div class="kpi-badge">📚</div>
-      <div class="kpi-label">수강 인원 (B)</div>
-      <div class="kpi-value" id="kpiEnrolled">—</div>
-      <div class="kpi-sub">1회 이상 사용한 인원</div>
-    </div>
-    <div class="kpi amber">
-      <div class="kpi-badge">⏱</div>
-      <div class="kpi-label">총 학습시간</div>
-      <div class="kpi-value" id="kpiHours">—</div>
-      <div class="kpi-sub" id="kpiHoursSub">—</div>
-    </div>
-    <div class="kpi purple">
-      <div class="kpi-badge">🏆</div>
-      <div class="kpi-label">전체 사용률 (B/A)</div>
-      <div class="kpi-value" id="kpiRate">—</div>
-      <div class="kpi-sub">선택 법인 기준</div>
-    </div>
+    <div class="dept-wrap"><canvas id="fc-dept"></canvas></div>
   </div>
-
-  <!-- MONTHLY TREND -->
-  <div class="section-label">📊 플랫폼별 월간 추이</div>
-  <div class="card" style="margin-bottom:24px">
-    <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:12px;">
-      <span id="monthChartTitle">월별 학습시간 추이</span>
-      <div style="display:flex;gap:16px;font-size:12px;" id="monthLegend"></div>
+  <div class="dept-card">
+    <div class="plat-hdr">
+      <span class="inf-badge">inflearn</span>
+      <span style="font-size:10px;color:#888;margin-left:6px;">— 누적 학습시간(H) &nbsp; ● 활성유저 수(명)</span>
     </div>
-    <canvas id="monthlyChart" height="85"></canvas>
+    <div class="dept-wrap"><canvas id="inf-dept"></canvas></div>
   </div>
+</div>
 
-  <!-- ENTITY TABLE + DAY OF WEEK -->
-  <div class="grid-2-1">
-    <div class="card">
-      <div class="card-title"><span class="dot"></span> ① 법인별 이용 현황</div>
-      <table class="entity-table">
-        <thead><tr><th>법인/스튜디오</th><th style="text-align:right">총원(A)</th><th style="text-align:right">수강인원(B)</th><th>사용률</th></tr></thead>
-        <tbody id="entityRows"></tbody>
-      </table>
-      <div style="font-size:11px;color:var(--muted);margin-top:12px;line-height:1.7;">
-        * 대상여부=TRUE인 국내 재직 구성원 기준<br>** 1회 이상 사용한 인원 (선택 플랫폼 기준)
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot purple"></span> 요일별 학습시간</div>
-      <div id="dowSection1">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px" id="dowLabel1">패스트캠퍼스</div>
-        <div class="day-bars" id="dayBarFC"></div>
-      </div>
-      <div id="dowSection2" style="margin-top:18px;">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">인프런</div>
-        <div class="day-bars" id="dayBarINF"></div>
-      </div>
-    </div>
+<!-- 섹션3 -->
+<div class="sec-title purple">③기타 참고지표</div>
+<div class="s3-grid">
+  <div class="ref-card">
+    <div class="plat-hdr"><span class="fc-badge">Fast campus</span></div>
+    <div class="ref-title">요일 별 학습시간 비중</div>
+    <div class="dow-wrap"><canvas id="fc-dow"></canvas></div>
+    <div class="ref-title">인기 강좌 순위</div>
+    <table class="c-table">
+      <thead><tr><th>순위</th><th>코스명</th><th>학습인원(명)</th><th>총 학습시간(H)</th></tr></thead>
+      <tbody id="fc-courses"></tbody>
+    </table>
   </div>
-
-  <!-- COURSES -->
-  <div class="section-label">🏅 인기 강좌 TOP 5</div>
-  <div class="grid-2" style="margin-bottom:24px">
-    <div class="card" id="courseCard1">
-      <div class="card-title" id="courseTitle1"><span class="dot amber"></span> 패스트캠퍼스 인기 강좌</div>
-      <div class="course-list" id="fcCourses"></div>
-    </div>
-    <div class="card" id="courseCard2">
-      <div class="card-title"><span class="dot green"></span> 인프런 인기 강좌</div>
-      <div class="course-list" id="infCourses"></div>
-    </div>
+  <div class="ref-card">
+    <div class="plat-hdr"><span class="inf-badge">inflearn</span></div>
+    <div class="ref-title">요일 별 학습시간 비중</div>
+    <div class="dow-wrap"><canvas id="inf-dow"></canvas></div>
+    <div class="ref-title">인기 강좌 순위</div>
+    <table class="c-table">
+      <thead><tr><th>순위</th><th>코스명</th><th>학습인원(명)</th><th>총 학습시간(H)</th></tr></thead>
+      <tbody id="inf-courses"></tbody>
+    </table>
   </div>
+</div>
 
-  <!-- CATEGORY + HQ DEPT -->
-  <div class="section-label">📂 카테고리 & 본부별 현황</div>
-  <div class="grid-2" style="margin-bottom:24px">
-    <div class="card" id="catCard">
-      <div class="card-title" id="catTitle"><span class="dot amber"></span> 패스트캠퍼스 카테고리 분포</div>
-      <div class="cat-list" id="catFC"></div>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot"></span> ② KRAFTON HQ 본부별 학습시간</div>
-      <canvas id="deptChart" height="200"></canvas>
-    </div>
-  </div>
-
-  <!-- PLATFORM SUMMARY -->
-  <div class="section-label" id="summaryLabel">🔍 플랫폼별 수강 현황 요약</div>
-  <div class="grid-2" id="summaryGrid" style="margin-bottom:24px">
-    <div class="card">
-      <div class="card-title"><span class="dot amber"></span> 패스트캠퍼스 월별 학습시간</div>
-      <canvas id="fcMonthlyBar" height="90"></canvas>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot green"></span> 인프런 월별 학습시간</div>
-      <canvas id="infMonthlyBar" height="90"></canvas>
-    </div>
-  </div>
-
-  <div class="footnote">
-    <b>* 대상 총원</b>: 국내 재직 중인 KRAFTON HQ, KR Studios, Beyond the Game 구성원<br>
-    <b>** 수강 인원</b>: 본 제도를 1회 이상 사용한 인원 (플랫폼 합산 중복 제거 기준)
-  </div>
-
-</div><!-- /container -->
+</div><!-- /page -->
 
 <script>
-// ══════════════════════════════════════════
-// 구글 시트 ID (여기만 바꾸면 됩니다)
-// ══════════════════════════════════════════
-const SHEET_ID = '1Ehrfma2NoEvGe6hCruDSsEUwVSZV2bXP';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbw_lEMn9KbZJeexgAd4V_246mOpeojYifp8t38yaAxKVvqeCeiGIN2JFjzHeyooFsA/exec';
 
-const VALID_CORPS = ['5minlab','Dreamotion','Flyway Games','JOFSOFT','KRAFTON HQ',
-  'Loonshot Games','OVERDARE','Olivetree Games','Omni Craftlabs','PUBG STUDIOS',
-  'ReLU Games','Rising Wings','bluehole studio','inZOI studio','기타(해외파견)'];
-const DOW = ['월','화','수','목','금','토','일'];
-const CAT_COLORS = ['#f59e0b','#fb923c','#f87171','#a78bfa','#60a5fa','#34d399','#4ade80','#facc15','#e879f9','#38bdf8'];
+const CORP_TOTAL_FALLBACK = {
+  'KRAFTON HQ':1263,'PUBG STUDIOS':661,'bluehole studio':151,
+  'inZOI studio':131,'5minlab':113,'Rising Wings':64,
+  'OVERDARE':99,'Omni Craftlabs':93,'Flyway Games':78,
+  'ReLU Games':39,'Dreamotion':30,'JOFSOFT':9,
+  'Loonshot Games':40,'Olivetree Games':16,'기타(해외파견)':2
+};
+let corpTotalMap = { ...CORP_TOTAL_FALLBACK };
 
-let DATA = null;
-let selectedCorps = [];
-let currentTab = 'both';
-
-// Chart instances
-let chartMonthly = null, chartDept = null, chartFCBar = null, chartINFBar = null;
-
-function sheetUrl(name) {
-  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}`;
+function load() {
+  const s = document.createElement('script');
+  s.src = GAS_URL + '?callback=onData&t=' + Date.now();
+  s.onerror = () => showErr('GAS 연결 실패');
+  document.head.appendChild(s);
+  setTimeout(() => {
+    if (!document.getElementById('loading').classList.contains('hide'))
+      showErr('로딩 시간 초과. 새로고침 해주세요.');
+  }, 20000);
 }
 
-// ── LOAD ──────────────────────────────────
-async function loadData() {
-  showLoading(true);
-  hideError();
-  setRefreshSpin(true);
+function onData(d) {
+  if (d.error) { showErr('GAS 오류: ' + d.error); return; }
   try {
-    document.getElementById('loadingSub').textContent = '패스트캠퍼스 시트 로딩...';
-    const fast = await fetchSheet('패스트캠퍼스');
-    document.getElementById('loadingSub').textContent = '인프런 시트 로딩...';
-    const inf  = await fetchSheet('인프런');
-    document.getElementById('loadingSub').textContent = '인사정보 시트 로딩...';
-    const hr   = await fetchSheet('인사정보');
-    DATA = build(fast, inf, hr);
-    selectedCorps = [...DATA.corps];
-    buildChips();
-    renderAll();
-    showLoading(false);
-  } catch(e) {
-    showLoading(false);
-    showError('구글 시트 데이터를 불러오지 못했습니다. 공유 설정(링크 공개)을 확인해주세요.');
-  }
-  setRefreshSpin(false);
-}
+    corpTotalMap = Object.keys(d.corpTotals || {}).length ? d.corpTotals : { ...CORP_TOTAL_FALLBACK };
+    renderAll(d);
+    document.getElementById('upd-date').textContent = d.updatedAt || '-';
 
-function fetchSheet(name) {
-  return new Promise((res, rej) => {
-    Papa.parse(sheetUrl(name), {
-      download: true, header: true, skipEmptyLines: true,
-      complete: r => res(r.data),
-      error: e => rej(e)
-    });
-  });
-}
-
-// ── BUILD DATA ─────────────────────────────
-function build(fast, inf, hr) {
-  function toMonth(v) {
-    if (!v) return null;
-    const d = new Date(v);
-    return isNaN(d) ? null : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  }
-  fast.forEach(r => { r._month = toMonth(r['접속년월']); });
-  inf.forEach(r => { r._month = toMonth(r['접속년월'] || r['학습시작 일자']); });
-
-  // 최신 날짜
-  let maxDate = null;
-  [...fast,...inf].forEach(r => {
-    const raw = r['접속년월'] || r['학습시작 일자'];
-    if (!raw) return;
-    const d = new Date(raw);
-    if (!isNaN(d) && (!maxDate || d > maxDate)) maxDate = d;
-  });
-  const updateStr = maxDate
-    ? `${maxDate.getFullYear()}-${String(maxDate.getMonth()+1).padStart(2,'0')}-${String(maxDate.getDate()).padStart(2,'0')}`
-    : '—';
-
-  // 총원 (법인별)
-  const corpTotalMap = {};
-  hr.forEach(r => {
-    if (r['대상여부'] === 'TRUE') {
-      const c = r['법인구분'];
-      if (c && VALID_CORPS.includes(c)) corpTotalMap[c] = (corpTotalMap[c] || 0) + 1;
+    const rawPeriod = (d.periodLabel || '').trim();
+    if (!rawPeriod) {
+      document.getElementById('period-label-1').textContent = '기간: -';
+    } else if (/^기간\s*:/.test(rawPeriod)) {
+      document.getElementById('period-label-1').textContent = rawPeriod;
+    } else {
+      document.getElementById('period-label-1').textContent = `기간: ${rawPeriod}`;
     }
-  });
-  const grandTotal = Object.values(corpTotalMap).reduce((s,v)=>s+v,0);
 
-  const corps = VALID_CORPS.filter(c =>
-    fast.some(r=>r['법인구분']===c) || inf.some(r=>r['법인구분']===c)
-  );
-
-  return { fast, inf, hr, corpTotalMap, grandTotal, corps, updateStr };
+    document.getElementById('loading').classList.add('hide');
+  } catch(e) { showErr('렌더링 오류: ' + e.message); }
 }
 
-// ── FILTER CHIPS ───────────────────────────
-function buildChips() {
-  const el = document.getElementById('corpChips'); el.innerHTML = '';
-  DATA.corps.forEach(c => {
-    const b = document.createElement('button');
-    b.className = 'chip active'; b.dataset.corp = c; b.textContent = c;
-    b.onclick = () => toggleCorp(c);
-    el.appendChild(b);
-  });
-}
-function toggleCorp(c) {
-  if (selectedCorps.includes(c)) { if (selectedCorps.length===1) return; selectedCorps = selectedCorps.filter(x=>x!==c); }
-  else selectedCorps.push(c);
-  updateChips(); renderAll();
-}
-function selectAll() { selectedCorps=[...DATA.corps]; updateChips(); renderAll(); }
-function clearAll()  { selectedCorps=[DATA.corps[0]]; updateChips(); renderAll(); }
-function updateChips() { document.querySelectorAll('.chip').forEach(b=>b.classList.toggle('active',selectedCorps.includes(b.dataset.corp))); }
-
-// ── TAB ────────────────────────────────────
-function setTab(t) {
-  currentTab = t;
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`.tab-btn.tab-${t==='both'?'both':t}`).classList.add('active');
-  renderAll();
+function showErr(msg) {
+  document.getElementById('loading').classList.add('hide');
+  const b = document.getElementById('err');
+  b.style.display = 'block'; b.textContent = '⚠️ ' + msg;
 }
 
-// ── HELPERS ────────────────────────────────
-function filtered(arr) { return arr.filter(r=>selectedCorps.includes(r['법인구분'])); }
-function getFast() { return currentTab==='inf'  ? [] : filtered(DATA.fast); }
-function getInf()  { return currentTab==='fast' ? [] : filtered(DATA.inf);  }
-function sumH(arr) { return arr.reduce((s,r)=>s+(parseFloat(r['학습시간(H)'])||0),0); }
-function normalizeId(e) { return e ? String(e).split('@')[0].toLowerCase().trim() : null; }
-function enrolledSet(arr) {
-  const s = new Set();
-  arr.filter(r=>r['활성여부(최초1회)']==1||r['활성여부(최초1회)']==='TRUE').forEach(r=>{
-    const u=normalizeId(r['메일주소'])||r['사번']; if(u)s.add(u);
-  });
-  return s;
-}
-function monthAgg(arr) {
-  const m={};
-  arr.forEach(r=>{ if(r._month) m[r._month]=(m[r._month]||0)+(parseFloat(r['학습시간(H)'])||0); });
-  return m;
-}
-function dowAgg(arr) {
-  const m={};
-  arr.forEach(r=>{ const d=r['접속요일']; if(d)m[d]=(m[d]||0)+(parseFloat(r['학습시간(H)'])||0); });
-  return m;
+function renderAll(d) {
+  renderKPI(d.kpi);
+  renderDailyChart('fc', d.fcDaily || []);
+  renderDailyChart('inf', d.infDaily || []);
+  renderCorpTable('fc', d.fcCorps || []);
+  renderCorpTable('inf', d.infCorps || []);
+  renderCorpList('fc');
+  renderCorpList('inf');
+  renderDeptChart('fc', d.fcDept || []);
+  renderDeptChart('inf', d.infDept || []);
+  renderDowChart('fc', (d.fcDow || {}).dow || []);
+  renderDowChart('inf', (d.infDow || {}).dow || []);
+  renderCourses('fc', (d.fcDow || {}).topCourses || []);
+  renderCourses('inf', (d.infDow || {}).topCourses || []);
 }
 
-// ── RENDER ALL ─────────────────────────────
-function renderAll() {
-  if (!DATA) return;
-  document.getElementById('updateDate').textContent = DATA.updateStr;
-  renderKPI();
-  renderMonthly();
-  renderEntityTable();
-  renderDOW();
-  renderCourses();
-  renderCategory();
-  renderDept();
-  renderPlatformBars();
-  updateLabels();
+function renderKPI(k) {
+  if (!k) return;
+  document.getElementById('k-total').textContent = Math.round(k.totalHeadcount||0).toLocaleString() + ' 명';
+  document.getElementById('k-users').textContent = (k.totalUsers||0).toLocaleString() + ' 명';
+  document.getElementById('k-rate').textContent  = (Math.round((k.usageRate||0)*10)/10) + '%';
 }
 
-// ── KPI ────────────────────────────────────
-function renderKPI() {
-  const fa=getFast(), ia=getInf();
-  const fH=sumH(fa), iH=sumH(ia);
-  const allSel = selectedCorps.length===DATA.corps.length;
-  const total = allSel ? DATA.grandTotal : selectedCorps.reduce((s,c)=>s+(DATA.corpTotalMap[c]||0),0);
-  const fSet=enrolledSet(fa), iSet=enrolledSet(ia);
-  const merged=new Set([...fSet,...iSet]);
-  const enrolled = currentTab==='fast'?fSet.size:currentTab==='inf'?iSet.size:merged.size;
-  const rate = total>0 ? enrolled/total : 0;
+function renderDailyChart(p, data) {
+  if (!data.length) return;
+  const ctx = document.getElementById(p+'-daily').getContext('2d');
+  const isFC = p==='fc';
+  const barColor = isFC ? 'rgba(239,154,154,.8)' : 'rgba(128,203,196,.8)';
+  const lineColor = isFC ? '#e53935' : '#00897b';
 
-  document.getElementById('kpiTotal').textContent    = total.toLocaleString();
-  document.getElementById('kpiTotalSub').textContent = `${selectedCorps.length}개 법인 선택`;
-  document.getElementById('kpiEnrolled').textContent = enrolled.toLocaleString();
-  document.getElementById('kpiRate').textContent     = (rate*100).toFixed(1)+'%';
-  if (currentTab==='fast') {
-    document.getElementById('kpiHours').textContent    = Math.round(fH).toLocaleString()+'H';
-    document.getElementById('kpiHoursSub').textContent = '패스트캠퍼스';
-  } else if (currentTab==='inf') {
-    document.getElementById('kpiHours').textContent    = Math.round(iH).toLocaleString()+'H';
-    document.getElementById('kpiHoursSub').textContent = '인프런';
-  } else {
-    document.getElementById('kpiHours').textContent    = Math.round(fH+iH).toLocaleString()+'H';
-    document.getElementById('kpiHoursSub').textContent = `패캠 ${Math.round(fH).toLocaleString()}H + 인프런 ${Math.round(iH).toLocaleString()}H`;
-  }
-}
-
-// ── MONTHLY CHART ──────────────────────────
-function renderMonthly() {
-  const fa=getFast(), ia=getInf();
-  const fm=monthAgg(fa), im=monthAgg(ia);
-  const months=[...new Set([...Object.keys(fm),...Object.keys(im)])].sort();
-  const datasets=[];
-  if(currentTab!=='inf') datasets.push({ label:'패스트캠퍼스', data:months.map(m=>fm[m]||0), backgroundColor:'rgba(245,158,11,0.7)', borderColor:'#f59e0b', borderWidth:1, borderRadius:5, order:1 });
-  if(currentTab!=='fast') datasets.push({ label:'인프런', data:months.map(m=>im[m]||0), backgroundColor:'rgba(16,185,129,0.7)', borderColor:'#10b981', borderWidth:1, borderRadius:5, order:2 });
-  if(currentTab==='both') datasets.push({ label:'합계', data:months.map((_,i)=>(fm[months[i]]||0)+(im[months[i]]||0)), type:'line', borderColor:'#60a5fa', backgroundColor:'rgba(96,165,250,0.08)', borderWidth:2, pointBackgroundColor:'#60a5fa', pointRadius:3, tension:0.4, fill:true, order:0 });
-
-  if(chartMonthly) chartMonthly.destroy();
-  chartMonthly = new Chart(document.getElementById('monthlyChart'), {
-    type:'bar', data:{labels:months,datasets},
-    options:{
-      responsive:true,
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a2235', borderColor:'rgba(99,179,237,0.2)', borderWidth:1, callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}H`} } },
-      scales:{ x:{grid:{display:false}}, y:{grid:{color:'rgba(99,179,237,0.07)'},ticks:{callback:v=>v+'H'}} },
-      interaction:{mode:'index',intersect:false}
-    }
-  });
-
-  // legend
-  const leg=document.getElementById('monthLegend'); leg.innerHTML='';
-  datasets.forEach(ds=>{
-    const col=ds.label==='패스트캠퍼스'?'var(--fc-color)':ds.label==='인프런'?'var(--inf-color)':'var(--highlight)';
-    leg.innerHTML+=`<span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:${col};display:inline-block"></span>${ds.label}</span>`;
-  });
-
-  const xl=document.getElementById('monthChartTitle');
-  xl.textContent=`월별 학습시간 추이${currentTab==='fast'?' — 패스트캠퍼스':currentTab==='inf'?' — 인프런':''}`;
-}
-
-// ── ENTITY TABLE ───────────────────────────
-function renderEntityTable() {
-  function corpEnrolled(arr) {
-    const m={};
-    arr.filter(r=>r['활성여부(최초1회)']==1||r['활성여부(최초1회)']==='TRUE').forEach(r=>{
-      const c=r['법인구분'],u=normalizeId(r['메일주소'])||r['사번'];
-      if(c&&u){if(!m[c])m[c]=new Set();m[c].add(u);}
-    });
-    return m;
-  }
-  const fm=corpEnrolled(DATA.fast), im=corpEnrolled(DATA.inf);
-  const tbody=document.getElementById('entityRows'); tbody.innerHTML='';
-  let sumT=0,sumE=0;
-  selectedCorps.forEach(c=>{
-    const tot=DATA.corpTotalMap[c]||0;
-    let enr;
-    if(currentTab==='fast') enr=(fm[c]||new Set()).size;
-    else if(currentTab==='inf') enr=(im[c]||new Set()).size;
-    else { const s=new Set([...(fm[c]||new Set()),...(im[c]||new Set())]); enr=s.size; }
-    sumT+=tot; sumE+=enr;
-    const rate=tot>0?enr/tot:0;
-    let fill='linear-gradient(90deg,#3b82f6,#06b6d4)';
-    if(rate>0.45) fill='linear-gradient(90deg,#10b981,#34d399)';
-    else if(rate>0.35) fill='linear-gradient(90deg,#f59e0b,#fcd34d)';
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="entity-name">${c}</td>
-      <td style="text-align:right;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">${tot.toLocaleString()}</td>
-      <td style="text-align:right;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;font-weight:600">${enr.toLocaleString()}</td>
-      <td><div style="display:flex;align-items:center;gap:8px">
-        <div class="rate-bar-wrap"><div class="rate-bar"><div class="rate-bar-fill" style="width:${Math.min(rate*100,100).toFixed(1)}%;background:${fill}"></div></div></div>
-        <span class="rate-val">${(rate*100).toFixed(1)}%</span>
-      </div></td>`;
-    tbody.appendChild(tr);
-  });
-  const tr=document.createElement('tr'); tr.className='total-row';
-  const r=sumT>0?sumE/sumT:0;
-  tr.innerHTML=`<td>합계</td>
-    <td style="text-align:right;font-family:'Space Mono',monospace;font-size:11px">${sumT.toLocaleString()}</td>
-    <td style="text-align:right;font-family:'Space Mono',monospace;font-size:11px">${sumE.toLocaleString()}</td>
-    <td><span class="rate-val">${(r*100).toFixed(1)}%</span></td>`;
-  tbody.appendChild(tr);
-}
-
-// ── DOW ────────────────────────────────────
-function renderDOW() {
-  const sec2=document.getElementById('dowSection2');
-  function drawBars(id,map,c1,c2){
-    const el=document.getElementById(id); el.innerHTML='';
-    const max=Math.max(...DOW.map(d=>map[d]||0),0.1);
-    DOW.forEach(d=>{
-      const h=map[d]||0,barH=Math.round((h/max)*90);
-      const wrap=document.createElement('div'); wrap.className='day-bar-wrap';
-      wrap.innerHTML=`<div class="day-value">${h.toFixed(0)}H</div>
-        <div class="day-bar-inner" style="height:${barH}px;background:linear-gradient(180deg,${c1},${c2});opacity:${h===Math.max(...Object.values(map))?1:0.6}"></div>
-        <div class="day-label">${d}</div>`;
-      el.appendChild(wrap);
-    });
-  }
-  if(currentTab==='both'){
-    drawBars('dayBarFC',dowAgg(getFast()),'#f59e0b','#fb923c');
-    drawBars('dayBarINF',dowAgg(getInf()),'#10b981','#06b6d4');
-    sec2.style.display='block';
-    document.getElementById('dowLabel1').textContent='패스트캠퍼스';
-  } else if(currentTab==='fast'){
-    drawBars('dayBarFC',dowAgg(getFast()),'#f59e0b','#fb923c');
-    sec2.style.display='none';
-    document.getElementById('dowLabel1').textContent='패스트캠퍼스';
-  } else {
-    drawBars('dayBarFC',dowAgg(getInf()),'#10b981','#06b6d4');
-    sec2.style.display='none';
-    document.getElementById('dowLabel1').textContent='인프런';
-  }
-}
-
-// ── COURSES ────────────────────────────────
-function renderCourses() {
-  function top5(arr,col){
-    const m={};
-    arr.forEach(r=>{
-      const n=r[col]; if(!n)return;
-      if(!m[n])m[n]={users:new Set(),hours:0};
-      m[n].hours+=(parseFloat(r['학습시간(H)'])||0);
-      if(r['활성여부(최초1회)']==1||r['활성여부(최초1회)']==='TRUE'){
-        const u=normalizeId(r['메일주소'])||r['사번']; if(u)m[n].users.add(u);
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d=>d.dateLabel),
+      datasets: [
+        { type:'bar', label:'학습시간(H)', data:data.map(d=>d.hours),
+          backgroundColor:barColor, borderWidth:0, yAxisID:'y', barPercentage:.9 },
+        { type:'line', label:'수강인원(명)', data:data.map(d=>d.users),
+          borderColor:lineColor, borderWidth:1.5, pointRadius:0,
+          tension:.3, yAxisID:'y2', fill:false }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
+      scales:{
+        x:{ ticks:{font:{size:8},maxRotation:0,autoSkip:true,maxTicksLimit:14}, grid:{display:false} },
+        y:{ position:'left', ticks:{font:{size:9}}, grid:{color:'rgba(0,0,0,.04)'} },
+        y2:{ position:'right', ticks:{font:{size:9},color:lineColor}, grid:{display:false} }
       }
-    });
-    return Object.entries(m).map(([n,v])=>({name:n,users:v.users.size,hours:v.hours})).sort((a,b)=>b.users-a.users).slice(0,5);
-  }
-  function draw(id,data,color){
-    const el=document.getElementById(id); el.innerHTML='';
-    if(!data.length){el.innerHTML='<div class="empty">데이터 없음</div>';return;}
-    data.forEach((r,i)=>{
-      const d=document.createElement('div'); d.className='course-item';
-      d.innerHTML=`<div class="${i<3?'course-rank top3':'course-rank'}">${i+1}</div>
-        <div class="course-name">${r.name}</div>
-        <div class="course-count" style="color:${color}">${r.users}<span>명</span></div>`;
-      el.appendChild(d);
-    });
-  }
-  const c2=document.getElementById('courseCard2');
-  if(currentTab==='both'){
-    draw('fcCourses',top5(getFast(),'course_name'),'#f59e0b');
-    draw('infCourses',top5(getInf(),'강의명'),'#10b981');
-    c2.style.display='block';
-  } else if(currentTab==='fast'){
-    draw('fcCourses',top5(getFast(),'course_name'),'#f59e0b');
-    c2.style.display='none';
-  } else {
-    draw('fcCourses',top5(getInf(),'강의명'),'#10b981');
-    c2.style.display='none';
-  }
-}
-
-// ── CATEGORY ──────────────────────────────
-function renderCategory() {
-  const fa=getFast(), ia=getInf();
-  const arr=currentTab==='inf'?ia:fa;
-  const col=currentTab==='inf'?null:'managedCat1';
-  const el=document.getElementById('catFC'); el.innerHTML='';
-  if(!col||!arr.length){el.innerHTML='<div class="empty">데이터 없음</div>';return;}
-  const m={};
-  arr.forEach(r=>{ const c=r[col]; if(c&&c!=='null')m[c]=(m[c]||0)+(parseFloat(r['학습시간(H)'])||0); });
-  const sorted=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const max=sorted[0]?.[1]||1;
-  sorted.forEach(([name,h],i)=>{
-    const d=document.createElement('div'); d.className='cat-item';
-    d.innerHTML=`<div class="cat-name">${name}</div>
-      <div class="cat-bar-wrap"><div class="cat-bar" style="width:${(h/max*100).toFixed(0)}%;background:${CAT_COLORS[i]}"></div></div>
-      <div class="cat-val">${Math.round(h)}H</div>`;
-    el.appendChild(d);
-  });
-}
-
-// ── DEPT CHART ─────────────────────────────
-function renderDept() {
-  const fastHQ=DATA.fast.filter(r=>r['법인구분']==='KRAFTON HQ');
-  const infHQ=DATA.inf.filter(r=>r['법인구분']==='KRAFTON HQ');
-  function deptH(arr){
-    const m={};
-    arr.forEach(r=>{ const d=r['본부구분']; if(d)m[d]=(m[d]||0)+(parseFloat(r['학습시간(H)'])||0); });
-    return m;
-  }
-  const fDept=deptH(fastHQ), iDept=deptH(infHQ);
-  const allDepts=[...new Set([...Object.keys(fDept),...Object.keys(iDept)])];
-  const sorted=allDepts.map(d=>({name:d,total:(fDept[d]||0)+(iDept[d]||0),f:fDept[d]||0,i:iDept[d]||0}))
-    .sort((a,b)=>b.total-a.total).slice(0,10);
-  const labels=sorted.map(d=>d.name.length>16?d.name.slice(0,16)+'…':d.name);
-
-  const fData=sorted.map(d=>d.f), iData=sorted.map(d=>d.i);
-  const datasets=[];
-  if(currentTab!=='inf') datasets.push({label:'패스트캠퍼스',data:fData,backgroundColor:'rgba(245,158,11,0.75)',borderRadius:4,borderSkipped:false});
-  if(currentTab!=='fast') datasets.push({label:'인프런',data:iData,backgroundColor:'rgba(16,185,129,0.75)',borderRadius:4,borderSkipped:false});
-
-  if(chartDept) chartDept.destroy();
-  chartDept = new Chart(document.getElementById('deptChart'),{
-    type:'bar',
-    data:{labels,datasets},
-    options:{
-      indexAxis:'y', responsive:true,
-      plugins:{legend:{position:'top',labels:{boxWidth:10,padding:12,color:'#64748b'}}, tooltip:{backgroundColor:'#1a2235',borderColor:'rgba(99,179,237,0.2)',borderWidth:1}},
-      scales:{x:{stacked:true,grid:{color:'rgba(99,179,237,0.07)'},ticks:{callback:v=>v+'H',color:'#64748b'}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10},color:'#64748b'}}}
     }
   });
 }
 
-// ── PLATFORM SUMMARY BARS ──────────────────
-function renderPlatformBars() {
-  const fa=getFast(), ia=getInf();
-  const fm=monthAgg(fa), im=monthAgg(ia);
-  const months=[...new Set([...Object.keys(fm),...Object.keys(im)])].sort();
-  const grid=document.getElementById('summaryGrid');
+function renderCorpTable(p, corps) {
+  const tbody = document.getElementById(p+'-tbody');
+  const tfoot = document.getElementById(p+'-tfoot');
+  if (!tbody) return;
 
-  if(currentTab==='fast'){
-    grid.style.gridTemplateColumns='1fr';
-  } else if(currentTab==='inf'){
-    grid.style.gridTemplateColumns='1fr';
-  } else {
-    grid.style.gridTemplateColumns='1fr 1fr';
-  }
+  const order = Object.keys(corpTotalMap);
+  const map = {};
+  corps.forEach(c => map[c.name] = c);
 
-  if(chartFCBar) chartFCBar.destroy();
-  if(chartINFBar) chartINFBar.destroy();
+  let sumTotal=0, sumUsers=0;
+  tbody.innerHTML = order.map(name => {
+    const c = map[name] || {};
+    const total = corpTotalMap[name] || 0;
+    const users = c.users || 0;
+    const rate  = c.rate  || (total>0 ? Math.round(users/total*1000)/10 : 0);
+    sumTotal += total; sumUsers += users;
+    const rc = rate>=40?'rh':rate>=20?'rm':'rl';
+    return `<tr><td class="tn">${name}</td><td>${total.toLocaleString()}</td><td>${users.toLocaleString()}</td><td class="${rc}">${rate}%</td></tr>`;
+  }).join('');
 
-  const fData=months.map(m=>fm[m]||0);
-  const iData=months.map(m=>im[m]||0);
-  const maxF=Math.max(...fData,1), maxI=Math.max(...iData,1);
-
-  if(currentTab!=='inf'){
-    chartFCBar = new Chart(document.getElementById('fcMonthlyBar'),{
-      type:'bar',
-      data:{labels:months,datasets:[{data:fData,backgroundColor:fData.map(v=>v===maxF?'#f59e0b':'rgba(245,158,11,0.3)'),borderRadius:4}]},
-      options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toFixed(1)}H`}}},scales:{x:{grid:{display:false},ticks:{color:'#64748b'}},y:{display:false}}}
-    });
-  }
-  if(currentTab!=='fast'){
-    chartINFBar = new Chart(document.getElementById('infMonthlyBar'),{
-      type:'bar',
-      data:{labels:months,datasets:[{data:iData,backgroundColor:iData.map(v=>v===maxI?'#10b981':'rgba(16,185,129,0.3)'),borderRadius:4}]},
-      options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toFixed(1)}H`}}},scales:{x:{grid:{display:false},ticks:{color:'#64748b'}},y:{display:false}}}
-    });
-  }
+  const sumRate = sumTotal>0 ? Math.round(sumUsers/sumTotal*1000)/10 : 0;
+  tfoot.innerHTML = `<tr><td>합계</td><td>${sumTotal.toLocaleString()}</td><td>${sumUsers.toLocaleString()}</td><td>${sumRate}%</td></tr>`;
 }
 
-// ── LABELS ─────────────────────────────────
-function updateLabels() {
-  const isFast=currentTab==='fast', isInf=currentTab==='inf';
-  document.getElementById('courseTitle1').innerHTML=`<span class="dot ${isInf?'green':'amber'}"></span> ${isInf?'인프런':'패스트캠퍼스'} 인기 강좌`;
-  document.getElementById('catTitle').innerHTML=`<span class="dot ${isInf?'green':'amber'}"></span> ${isInf?'인프런':'패스트캠퍼스'} 카테고리 분포`;
+function renderCorpList(p) {
+  const el = document.getElementById(p+'-corp-list');
+  if (!el) return;
+  el.innerHTML = '<div class="cl-hdr">법인</div>' +
+    Object.keys(corpTotalMap).map(n => `<div class="cl-item">${n}</div>`).join('');
 }
 
-// ── UI HELPERS ─────────────────────────────
-function showLoading(v) { document.getElementById('loadingScreen').classList.toggle('hidden',!v); }
-function hideError() { document.getElementById('errorBanner').classList.remove('show'); }
-function showError(m) { document.getElementById('errorBanner').classList.add('show'); document.getElementById('errorMsg').textContent=m; }
-function setRefreshSpin(v) { const i=document.getElementById('refreshIcon'); i.className=v?'refresh-spin':''; i.textContent='↻'; }
+function renderDeptChart(p, deptData) {
+  if (!deptData.length) return;
+  const ctx = document.getElementById(p+'-dept').getContext('2d');
+  const isFC = p==='fc';
 
-Chart.defaults.color='#64748b';
-Chart.defaults.borderColor='rgba(99,179,237,0.1)';
-Chart.defaults.font.family="'Space Mono','Noto Sans KR',sans-serif";
-Chart.defaults.font.size=11;
+  const labels = deptData.map(d => d.dept);
+  const hours  = deptData.map(d => d.hours);
+  const users  = deptData.map(d => d.users);
 
-loadData();
+  new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        { type:'bar', label:'누적 학습시간(H)', data:hours, backgroundColor:'rgba(96,96,116,.65)', yAxisID:'y' },
+        { type:'line', label:'활성유저 수(명)', data:users,
+          borderColor: isFC?'#e53935':'#00897b',
+          backgroundColor: isFC?'#e53935':'#00897b',
+          borderWidth:2, pointRadius:3, tension:0, yAxisID:'y2', fill:false }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
+      scales:{
+        x:{ ticks:{font:{size:7},maxRotation:45}, grid:{display:false} },
+        y:{ position:'left', ticks:{font:{size:8}}, grid:{color:'rgba(0,0,0,.04)'} },
+        y2:{ position:'right', ticks:{font:{size:8},color:isFC?'#e53935':'#00897b'}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderDowChart(p, dowData) {
+  if (!dowData.length) return;
+  const ctx = document.getElementById(p+'-dow').getContext('2d');
+  const isFC = p==='fc';
+  const color = isFC ? 'rgba(229,57,53,.7)' : 'rgba(0,137,123,.7)';
+
+  new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: dowData.map(d=>d.day),
+      datasets:[{ label:'비중(%)', data:dowData.map(d=>d.pct), backgroundColor:color, borderRadius:3 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: c => c.raw+'%' } }
+      },
+      scales:{
+        x:{ ticks:{font:{size:11}}, grid:{display:false} },
+        y:{ ticks:{font:{size:9},callback:v=>v+'%'}, grid:{color:'rgba(0,0,0,.04)'} }
+      }
+    },
+    plugins:[{
+      id:'datalabels',
+      afterDatasetDraw(chart) {
+        const {ctx,data} = chart;
+        chart.getDatasetMeta(0).data.forEach((bar,i) => {
+          const v = data.datasets[0].data[i];
+          if (v>0) {
+            ctx.save();
+            ctx.font = 'bold 10px Noto Sans KR';
+            ctx.fillStyle = '#333';
+            ctx.textAlign = 'center';
+            ctx.fillText(v+'%', bar.x, bar.y-5);
+            ctx.restore();
+          }
+        });
+      }
+    }]
+  });
+}
+
+function renderCourses(p, courses) {
+  const tbody = document.getElementById(p+'-courses');
+  if (!tbody||!courses.length) return;
+  tbody.innerHTML = courses.map((c,i) =>
+    `<tr class="r${i+1}"><td class="c-rank">${i+1}</td><td class="c-name">${c.name}</td><td class="c-num">${c.users.toLocaleString()}</td><td class="c-num">${c.hours.toLocaleString()}</td></tr>`
+  ).join('');
+}
+
+window.onload = load;
 </script>
 </body>
 </html>
