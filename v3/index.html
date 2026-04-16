@@ -296,7 +296,14 @@ function renderDailyChart(p, data) {
       responsive:true, maintainAspectRatio:false, animation:false,
       plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
       scales:{
-        x:{ ticks:{font:{size:8},maxRotation:0,autoSkip:true,maxTicksLimit:14}, grid:{display:false} },
+        x:{ ticks:{font:{size:8},maxRotation:0,autoSkip:false,callback:function(val,idx){
+      const label=this.getLabelForValue(val);
+      const m=label.match(/^(\d+)월\s*(\d+)일$/);
+      if(!m) return null;
+      const month=+m[1],day=+m[2];
+      if((month===9&&day===22)||day===1||day===15) return label;
+      return null;
+    }}, grid:{display:false} },
         y:{ position:'left', ticks:{font:{size:9}}, grid:{color:'rgba(0,0,0,.04)'} },
         y2:{ position:'right', ticks:{font:{size:9},color:lineColor}, grid:{display:false} }
       }
